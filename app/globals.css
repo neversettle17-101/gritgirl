@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/*
+ * Grit Girl design tokens — taken from the receipt-style mockup.
+ * paper / ink / blue / red / yellow. Bricolage Grotesque for headings,
+ * JetBrains Mono for body, numbers and receipts.
+ */
+@theme {
+  --color-paper: #fffdf8;
+  --color-ink: #1b1b1b;
+  --color-blue: #2b59c3;
+  --color-red: #e0412b;
+  --color-yellow: #ffe27a;
+  --color-muted: #555555;
+  --color-rule: #999999;
+
+  /* Activity-type swatches (mockup: R = ink, S = red, W = outlined). */
+  --color-run: var(--color-ink);
+  --color-strength: var(--color-red);
+  --color-walk: var(--color-paper);
+
+  --font-display: var(--font-bricolage), "Bricolage Grotesque", sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: var(--font-mono);
+}
+
+@layer base {
+  body {
+    background: var(--color-blue);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+  }
+}
+
+@utility receipt {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+@utility rule-dashed {
+  border-color: var(--color-ink);
+  border-style: dashed;
+}

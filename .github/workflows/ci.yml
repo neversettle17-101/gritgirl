@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Typecheck, lint, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+
+  database:
+    name: Migrations on a fresh DB + DB tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Fresh local stack; `supabase start` applies every migration in
+      # supabase/migrations (→ db/migrations) to an empty database.
+      - name: Start Supabase (applies migrations)
+        run: pnpm exec supabase start -x studio,imgproxy,vector,logflare,supavisor,postgres-meta
+      - name: Re-apply migrations from scratch
+        run: pnpm exec supabase db reset
+      - name: Lint database schema
+        run: pnpm exec supabase db lint --level warning --fail-on error
+      - name: Seed exercise library
+        run: pnpm seed:exercises
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      - name: DB tests (RLS, constraints, seed idempotency, schema drift)
+        run: pnpm test:db
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      - if: always()
+        run: pnpm exec supabase stop --no-backup
