@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 /**
  * Ledgers (§8): a run logged today shows up on the Day receipt, the Week
@@ -6,11 +6,16 @@ import { expect, test } from "@playwright/test";
  * specs share this user, so assertions target this run's own details.
  */
 
+// With cacheComponents, recently visited routes stay mounted but hidden, so
+// match only what is on screen.
+const visible = (l: Locator) => l.filter({ visible: true });
+
 const minutes = async (text: string | null) => Number((text ?? "").replace(/\D/g, "") || "0");
 
 test("log a run, then find it in the day, week and month ledgers", async ({ page }) => {
+  const note = `ledger check ${Date.now()}`;
   await page.goto("/");
-  const dayBefore = await minutes(await page.getByTestId("home-day").textContent());
+  const dayBefore = await minutes(await visible(page.getByTestId("home-day")).textContent());
 
   // Log it.
   await page.goto("/log/run");
@@ -18,7 +23,7 @@ test("log a run, then find it in the day, week and month ledgers", async ({ page
   await page.getByLabel("Distance in km").fill("7.31");
   await page.getByLabel("DURATION").fill("41:00");
   await page.getByLabel("AVG HEART RATE").fill("149");
-  await page.getByLabel("COMMENTS").fill("ledger check");
+  await page.getByLabel("COMMENTS").fill(note);
   await page.getByRole("button", { name: /PRINT RECEIPT/ }).click();
   await expect(page.getByRole("heading", { name: /Printed/ })).toBeVisible();
 
@@ -26,44 +31,44 @@ test("log a run, then find it in the day, week and month ledgers", async ({ page
   await page.getByRole("link", { name: "SEE TODAY'S LEDGER" }).click();
   await expect(page).toHaveURL(/\/day\?date=\d{4}-\d{2}-\d{2}/);
   await expect(page.getByRole("heading", { name: /Today's\s+receipt/ })).toBeVisible();
-  const item = page.getByRole("list", { name: "Items" }).getByRole("listitem").filter({ hasText: "ledger check" });
+  const item = page.getByRole("list", { name: "Items" }).getByRole("listitem").filter({ hasText: note });
   await expect(item).toContainText("RUN");
   await expect(item).toContainText("41 MIN");
   await expect(item).toContainText("7.31 KM · 41:00 · 5:37 /KM · 149 BPM");
   await expect(page.getByText(/STREAK BONUS/)).toBeVisible();
-  const dayTotal = await minutes(await page.getByTestId("day-total").textContent());
+  const dayTotal = await minutes(await visible(page.getByTestId("day-total")).textContent());
   expect(dayTotal).toBeGreaterThanOrEqual(41);
 
   // Tap to edit reuses the edit slip.
   await item.getByRole("link", { name: "Edit run" }).click();
   await expect(page.getByRole("heading", { name: /Fixing the/ })).toBeVisible();
-  await expect(page.getByLabel("Distance in km")).toHaveValue("7.31");
+  await expect(visible(page.getByLabel("Distance in km"))).toHaveValue("7.31");
 
   // Week statement: today's row has the run, and the total includes it.
   await page.goto("/week");
   await expect(page.getByRole("heading", { name: /Weekly\s+statement/ })).toBeVisible();
-  const todayRow = page.locator("tr[aria-current=date]");
+  const todayRow = visible(page.locator("tr[aria-current=date]"));
   await expect(todayRow).toContainText("RUN");
   expect(await minutes(await todayRow.locator("td").last().textContent())).toBe(dayTotal);
-  expect(await minutes(await page.getByTestId("week-total").textContent())).toBeGreaterThanOrEqual(dayTotal);
+  expect(await minutes(await visible(page.getByTestId("week-total")).textContent())).toBeGreaterThanOrEqual(dayTotal);
   await expect(page.getByTestId("week-chart").locator(".recharts-bar-rectangle").first()).toBeAttached();
 
   // Month ledger: today's cell has an R marker; tapping it opens the day.
   await page.getByRole("link", { name: "MONTH", exact: true }).click();
   await expect(page.getByRole("heading", { name: /Monthly\s+ledger/ })).toBeVisible();
-  const todayCell = page.locator("a[aria-current=date]");
+  const todayCell = visible(page.locator("a[aria-current=date]"));
   await expect(todayCell).toHaveAttribute("aria-label", /RUN.*TODAY/);
   await expect(todayCell).toContainText("R");
-  expect(await minutes(await page.getByTestId("month-total").textContent())).toBeGreaterThanOrEqual(1);
+  expect(await minutes(await visible(page.getByTestId("month-total")).textContent())).toBeGreaterThanOrEqual(1);
   await todayCell.click();
   await expect(page.getByRole("heading", { name: /Today's\s+receipt/ })).toBeVisible();
 
   // Home shortcut numbers are live.
   await page.getByRole("link", { name: "HOME", exact: true }).click();
   await expect
-    .poll(async () => minutes(await page.getByTestId("home-day").textContent()))
+    .poll(async () => minutes(await visible(page.getByTestId("home-day")).textContent()))
     .toBeGreaterThanOrEqual(dayBefore + 41);
-  expect(await minutes(await page.getByTestId("home-month").textContent())).toBeGreaterThanOrEqual(1);
+  expect(await minutes(await visible(page.getByTestId("home-month")).textContent())).toBeGreaterThanOrEqual(1);
 });
 
 test("ledger pages step back and forward", async ({ page }) => {
