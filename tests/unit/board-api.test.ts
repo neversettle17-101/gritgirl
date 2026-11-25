@@ -89,7 +89,7 @@ describe("GET /api/board", () => {
   });
 
   it("400 for a bad view or date", async () => {
-    for (const qs of ["?view=year&date=2026-11-25", "?view=day&date=2026-02-30", "?view=day&date=today"]) {
+    for (const qs of ["?view=decade&date=2026-11-25", "?view=day&date=2026-02-30", "?view=day&date=today"]) {
       const res = await get(qs);
       expect(res.status, qs).toBe(400);
       expect((await res.json()).error.code).toBe("bad_request");
@@ -156,6 +156,7 @@ describe("GET /api/board", () => {
       walks: 1,
       strength: 1,
       distanceM: { running: 5200, walking: 1000 },
+      volumeKg: 0, // timed sets only
     });
     expect(body.activities).toBeUndefined();
 

@@ -2,9 +2,9 @@ import { z } from "zod";
 import { BOARD_VIEWS } from "@/lib/domain/board";
 import { isoDateSchema } from "./activities";
 
-/** GET /api/board?view=day|week|month&date=YYYY-MM-DD (date defaults to today). */
+/** GET /api/board?view=day|week|month|year&date=YYYY-MM-DD (date defaults to today). */
 export const boardQuerySchema = z.object({
-  view: z.enum(BOARD_VIEWS, { message: "Use view=day, week or month" }).default("week"),
+  view: z.enum(BOARD_VIEWS, { message: "Use view=day, week, month or year" }).default("week"),
   date: isoDateSchema.optional(),
 });
 

@@ -201,8 +201,29 @@ export const userSettings = pgTable("user_settings", {
   defaultCycleLen: smallint("default_cycle_len").notNull().default(28),
   defaultPeriodLen: smallint("default_period_len").notNull().default(5),
   cyclePredictionsOn: boolean("cycle_predictions_on").notNull().default(true),
+  /** profile: all optional */
+  displayName: text("display_name"),
+  heightCm: numeric("height_cm", { precision: 4, scale: 1, mode: "number" }),
+  dateOfBirth: date("date_of_birth", { mode: "string" }),
   ...timestamps,
 });
+
+// ───────── profile ─────────
+
+/** Dated weigh-ins, one per day; the latest is the current weight. */
+export const bodyWeightEntries = pgTable(
+  "body_weight_entries",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    measuredOn: date("measured_on", { mode: "string" }).notNull(),
+    weightKg: numeric("weight_kg", { precision: 5, scale: 2, mode: "number" }).notNull(),
+    ...timestamps,
+  },
+  (t) => [unique("body_weight_entries_one_per_day").on(t.userId, t.measuredOn)],
+);
 
 // ───────── derived ─────────
 
@@ -223,6 +244,7 @@ export const tables = {
   exerciseSets,
   periodDays,
   userSettings,
+  bodyWeightEntries,
 } as const;
 
 export type Exercise = typeof exercises.$inferSelect;
@@ -234,3 +256,4 @@ export type ActivityExercise = typeof activityExercises.$inferSelect;
 export type ExerciseSet = typeof exerciseSets.$inferSelect;
 export type PeriodDay = typeof periodDays.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;
+export type BodyWeightEntry = typeof bodyWeightEntries.$inferSelect;

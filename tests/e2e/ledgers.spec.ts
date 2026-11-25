@@ -12,7 +12,7 @@ const visible = (l: Locator) => l.filter({ visible: true });
 
 const minutes = async (text: string | null) => Number((text ?? "").replace(/\D/g, "") || "0");
 
-test("log a run, then find it in the day, week and month ledgers", async ({ page }) => {
+test("log a run, then find it in the day, week, month and year ledgers", async ({ page }) => {
   const note = `ledger check ${Date.now()}`;
   await page.goto("/");
   const dayBefore = await minutes(await visible(page.getByTestId("home-day")).textContent());
@@ -53,7 +53,9 @@ test("log a run, then find it in the day, week and month ledgers", async ({ page
   expect(await minutes(await visible(page.getByTestId("week-total")).textContent())).toBeGreaterThanOrEqual(dayTotal);
   await expect(page.getByTestId("week-chart").locator(".recharts-bar-rectangle").first()).toBeAttached();
 
-  // Month ledger: today's cell has an R marker; tapping it opens the day.
+  // Month ledger, from the bottom bar's ledger pop-up: today's cell has an R
+  // marker; tapping it opens the day.
+  await page.getByRole("button", { name: "Ledgers" }).click();
   await page.getByRole("link", { name: "MONTH", exact: true }).click();
   await expect(page.getByRole("heading", { name: /Monthly\s+ledger/ })).toBeVisible();
   const todayCell = visible(page.locator("a[aria-current=date]"));
@@ -62,6 +64,14 @@ test("log a run, then find it in the day, week and month ledgers", async ({ page
   expect(await minutes(await visible(page.getByTestId("month-total")).textContent())).toBeGreaterThanOrEqual(1);
   await todayCell.click();
   await expect(page.getByRole("heading", { name: /Today's\s+receipt/ })).toBeVisible();
+
+  // Year ledger: this month's row counts it, and so does the year total.
+  await page.getByRole("button", { name: "Ledgers" }).click();
+  await page.getByRole("link", { name: "YEAR", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /Yearly\s+ledger/ })).toBeVisible();
+  const monthRow = visible(page.locator("tr[aria-current=date]"));
+  expect(await minutes(await monthRow.locator("td").last().textContent())).toBeGreaterThanOrEqual(dayTotal);
+  expect(await minutes(await visible(page.getByTestId("year-total")).textContent())).toBeGreaterThanOrEqual(1);
 
   // Home shortcut numbers are live.
   await page.getByRole("link", { name: "HOME", exact: true }).click();
@@ -81,6 +91,17 @@ test("ledger pages step back and forward", async ({ page }) => {
   await expect(page.getByText("FEB 2026")).toBeVisible();
   await page.getByRole("link", { name: /Next month/ }).click();
   await expect(page.getByText("MAR 2026")).toBeVisible();
+
+  await page.goto("/year?date=2026-02-14");
+  await expect(page.getByRole("heading", { name: /Yearly\s+ledger/ })).toBeVisible();
+  await page.getByRole("link", { name: "Previous year, 2025" }).click();
+  await expect(page).toHaveURL(/\/year\?date=2025-01-01/);
+  await page.getByRole("link", { name: "December 2025 ledger" }).click();
+  await expect(page.getByText("DEC 2025")).toBeVisible();
+
+  // The weekly statement is reachable from the month.
+  await page.getByRole("link", { name: "WEEK BY WEEK →" }).click();
+  await expect(page.getByRole("heading", { name: /Weekly\s+statement/ })).toBeVisible();
 
   await page.goto("/day?date=2026-02-14");
   await expect(page.getByRole("heading", { name: /Saturday's\s+receipt/ })).toBeVisible();

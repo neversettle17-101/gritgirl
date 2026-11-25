@@ -1,9 +1,9 @@
 /**
- * The Board (technical design §8): Day / Week / Month ledgers.
+ * The Board (technical design §8): Day / Week / Month / Year ledgers.
  *
  * Pure functions: resolve the date range for a view, aggregate activities per
  * local calendar day, total them up, and derive streaks. One payload feeds all
- * three ledgers; the UI only draws it.
+ * the ledgers; the UI only draws it.
  *
  * Rules (§8.4):
  *  - Minutes per type per day = sum of each activity's duration. Strength with
@@ -11,12 +11,14 @@
  *  - A day is active when it has at least one activity.
  *  - Dates are the user's local calendar dates (YYYY-MM-DD), never UTC instants.
  *  - Streaks are derived from activity dates and never stored.
+ *  - Strength volume = Σ weight × reps over sets that have both (bodyweight
+ *    and timed sets add nothing). Kilograms, like everything stored.
  */
 import { effectiveDurationSec, TYPE_LABEL, type ActivityDetail, type ActivityType } from "./activity-types";
 import { addDays, daysBetween } from "./dates";
 import type { Feel } from "@/lib/validation/activities";
 
-export const BOARD_VIEWS = ["day", "week", "month"] as const;
+export const BOARD_VIEWS = ["day", "week", "month", "year"] as const;
 export type BoardView = (typeof BOARD_VIEWS)[number];
 
 /** 0 = Sunday, 1 = Monday … 6 = Saturday (user_settings.week_starts_on). */
@@ -29,7 +31,7 @@ export interface BoardRange {
   view: BoardView;
   /** the date asked for */
   date: string;
-  /** the period itself: the day, the week, or the 1st..last of the month */
+  /** the period itself: the day, the week, the 1st..last of the month, or 1 Jan..31 Dec */
   start: string;
   end: string;
   /** the dates returned in `days`: same as start..end, except months are padded to whole weeks */
@@ -65,6 +67,8 @@ export interface BoardDay {
   /** sum of minutesByType */
   minutes: number;
   distanceM: CardioDistance;
+  /** strength volume in kg (Σ weight × reps) */
+  volumeKg: number;
   /** in time order (unknown start times last) */
   activities: BoardActivity[];
 }
@@ -77,6 +81,8 @@ export interface BoardTotals {
   walks: number;
   strength: number;
   distanceM: CardioDistance;
+  /** strength volume in kg (Σ weight × reps) */
+  volumeKg: number;
 }
 
 export interface Streaks {
@@ -131,6 +137,11 @@ export function resolveRange(view: BoardView, date: string, weekStartsOn: WeekSt
       const end = addDays(start, 6);
       return { view, date, start, end, from: start, to: end };
     }
+    case "year": {
+      const start = `${date.slice(0, 4)}-01-01`;
+      const end = `${date.slice(0, 4)}-12-31`;
+      return { view, date, start, end, from: start, to: end };
+    }
     case "month": {
       const start = startOfMonth(date);
       const end = endOfMonth(date);
@@ -150,6 +161,7 @@ export function resolveRange(view: BoardView, date: string, weekStartsOn: WeekSt
 export function shiftDate(view: BoardView, date: string, step: -1 | 1): string {
   if (view === "day") return addDays(date, step);
   if (view === "week") return addDays(date, 7 * step);
+  if (view === "year") return addMonths(date, 12 * step);
   return addMonths(date, step);
 }
 
@@ -176,6 +188,13 @@ export function compareActivitiesAsc(
   const bt = b.startTime ?? "99:99";
   if (at !== bt) return at < bt ? -1 : 1;
   return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
+}
+
+/** Σ weight × reps over the activity's sets that have both, in kg (2 decimals). */
+export function strengthVolumeKg(a: Pick<ActivityDetail, "exercises">): number {
+  let kg = 0;
+  for (const ex of a.exercises) for (const s of ex.sets) if (s.weightKg && s.reps) kg += s.weightKg * s.reps;
+  return Math.round(kg * 100) / 100;
 }
 
 export function summarizeActivity(a: ActivityDetail): BoardActivity {
@@ -207,9 +226,11 @@ export function aggregateDays(activities: ActivityDetail[], range: Pick<BoardRan
     const list = (byDate.get(date) ?? []).slice().sort(compareActivitiesAsc);
     const seconds = zeroByType();
     const distanceM: CardioDistance = { running: 0, walking: 0 };
+    let volumeKg = 0;
     for (const a of list) {
       seconds[a.type] += effectiveDurationSec(a) ?? 0;
       if (a.type !== "strength") distanceM[a.type] += a.distanceM ?? 0;
+      else volumeKg += strengthVolumeKg(a);
     }
     const minutesByType: ByType = {
       running: Math.round(seconds.running / 60),
@@ -222,6 +243,7 @@ export function aggregateDays(activities: ActivityDetail[], range: Pick<BoardRan
       minutesByType,
       minutes: minutesByType.running + minutesByType.walking + minutesByType.strength,
       distanceM,
+      volumeKg: Math.round(volumeKg * 100) / 100,
       activities: list.map(summarizeActivity),
     };
   });
@@ -236,6 +258,7 @@ export function totalize(days: BoardDay[]): BoardTotals {
     walks: 0,
     strength: 0,
     distanceM: { running: 0, walking: 0 },
+    volumeKg: 0,
   };
   for (const d of days) {
     if (!d.inPeriod) continue;
@@ -244,12 +267,14 @@ export function totalize(days: BoardDay[]): BoardTotals {
     t.workouts += d.activities.length;
     t.distanceM.running += d.distanceM.running;
     t.distanceM.walking += d.distanceM.walking;
+    t.volumeKg += d.volumeKg;
     for (const a of d.activities) {
       if (a.type === "running") t.runs += 1;
       else if (a.type === "walking") t.walks += 1;
       else t.strength += 1;
     }
   }
+  t.volumeKg = Math.round(t.volumeKg * 100) / 100;
   return t;
 }
 
@@ -348,4 +373,30 @@ export function homeLedgerNumbers(month: Board, weekStartsOn: WeekStart): { day:
     if (d.date >= weekStart && d.date <= today) week += d.minutes;
   }
   return { day, week, month: month.totals.workouts };
+}
+
+/** One row of the Year ledger: a calendar month's totals. */
+export interface MonthTotals extends BoardTotals {
+  /** the 1st of the month, YYYY-MM-01 */
+  month: string;
+  minutesByType: ByType;
+}
+
+/**
+ * The Year ledger's per-month breakdown: twelve rows, January first, each the
+ * totals of that month's days in the board (months with no days are zeros).
+ */
+export function monthlyBreakdown(board: Pick<Board, "range" | "days">): MonthTotals[] {
+  const year = board.range.start.slice(0, 4);
+  return Array.from({ length: 12 }, (_, i) => {
+    const month = `${year}-${String(i + 1).padStart(2, "0")}-01`;
+    const prefix = month.slice(0, 7);
+    const days = board.days.filter((d) => d.date.startsWith(prefix));
+    const minutesByType = zeroByType();
+    for (const d of days) {
+      if (!d.inPeriod) continue;
+      for (const t of ["running", "walking", "strength"] as const) minutesByType[t] += d.minutesByType[t];
+    }
+    return { month, minutesByType, ...totalize(days) };
+  });
 }

@@ -5,6 +5,8 @@ import type { TemplateDetail } from "@/lib/domain/template-types";
 import type { ActivityPayload } from "@/lib/validation/activities";
 import type { TemplatePayload } from "@/lib/validation/templates";
 import type { CustomExerciseInput } from "@/lib/validation/exercises";
+import type { BodyWeightEntry, Profile } from "@/lib/domain/profile";
+import type { BodyWeightInput, ProfilePatchInput } from "@/lib/validation/profile";
 
 /** Browser-side calls to our own /api route handlers. */
 
@@ -119,6 +121,28 @@ export async function upsertTemplate(doc: TemplatePayload): Promise<TemplateDeta
 export async function archiveTemplate(id: string): Promise<void> {
   try {
     await call<void>(`/api/templates/${id}`, { method: "DELETE" });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return;
+    throw e;
+  }
+}
+
+// ───────── profile ─────────
+
+export async function updateProfile(patch: ProfilePatchInput): Promise<Profile> {
+  return (await call<{ profile: Profile }>("/api/profile", { method: "PATCH", body: JSON.stringify(patch) })).profile;
+}
+
+export async function logBodyWeight(input: BodyWeightInput): Promise<BodyWeightEntry> {
+  return (
+    await call<{ bodyWeight: BodyWeightEntry }>("/api/body-weight", { method: "POST", body: JSON.stringify(input) })
+  ).bodyWeight;
+}
+
+/** Already gone counts as deleted. */
+export async function deleteBodyWeight(id: string): Promise<void> {
+  try {
+    await call<void>(`/api/body-weight/${id}`, { method: "DELETE" });
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) return;
     throw e;
