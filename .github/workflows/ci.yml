@@ -64,7 +64,8 @@ jobs:
 
   e2e:
     name: End-to-end (Playwright, phone viewport)
-    runs-on: ubuntu-latest
+    # Playwright 1.60 supports up to Ubuntu 24.04 (ubuntu-latest is newer).
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
