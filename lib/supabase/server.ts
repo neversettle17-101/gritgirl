@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { publicEnv } from "@/lib/env";
 
 /**
@@ -9,6 +10,9 @@ import { publicEnv } from "@/lib/env";
  * Row-Level Security applies to every query.
  */
 export async function createClient() {
+  // Supabase starts async session work that checks expiry with Date.now().
+  // Keep that work out of prerendering, including callers without page data.
+  await connection();
   const env = publicEnv();
   const cookieStore = await cookies();
 
