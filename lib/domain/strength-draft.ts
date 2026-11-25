@@ -374,8 +374,13 @@ export function activityToDraft(a: ActivityDetail, weightUnit: WeightUnit, key: 
 
 // ───────── local storage ─────────
 
-export function draftStorageKey(mode: "new" | "edit", id?: string): string {
-  return mode === "new" ? "gritgirl:draft:strength:new" : `gritgirl:draft:strength:${id}`;
+/**
+ * Where a slip's draft lives. A slip rung up from a regular gets its own key,
+ * so starting a regular never overwrites an unfinished fresh slip.
+ */
+export function draftStorageKey(mode: "new" | "edit", id?: string, templateId?: string): string {
+  if (mode === "edit") return `gritgirl:draft:strength:${id}`;
+  return templateId ? `gritgirl:draft:strength:regular:${templateId}` : "gritgirl:draft:strength:new";
 }
 
 /** Parses a stored draft; null if missing, corrupt or from an older version. */

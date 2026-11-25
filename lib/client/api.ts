@@ -1,7 +1,9 @@
 "use client";
 
 import type { ActivityDetail, ExerciseSummary, LastSets } from "@/lib/domain/activity-types";
+import type { TemplateDetail } from "@/lib/domain/template-types";
 import type { ActivityPayload } from "@/lib/validation/activities";
+import type { TemplatePayload } from "@/lib/validation/templates";
 import type { CustomExerciseInput } from "@/lib/validation/exercises";
 
 /** Browser-side calls to our own /api route handlers. */
@@ -80,5 +82,45 @@ export async function lastSets(exerciseId: string): Promise<LastSets | null> {
     return (await call<{ last: LastSets | null }>(`/api/exercises/${exerciseId}/last`)).last;
   } catch {
     return null; // pre-fill is a nicety; never block adding the exercise
+  }
+}
+
+// ───────── templates ("Regulars") ─────────
+
+export async function createTemplate(doc: TemplatePayload): Promise<TemplateDetail> {
+  return (await call<{ template: TemplateDetail }>("/api/templates", { method: "POST", body: JSON.stringify(doc) }))
+    .template;
+}
+
+export async function replaceTemplate(doc: TemplatePayload): Promise<TemplateDetail> {
+  return (
+    await call<{ template: TemplateDetail }>(`/api/templates/${doc.id}`, {
+      method: "PUT",
+      body: JSON.stringify(doc),
+    })
+  ).template;
+}
+
+/**
+ * Creates the template, or replaces it if that id already exists (a retry
+ * after the template saved but the activity did not). Ids are client-made,
+ * so this never makes duplicates.
+ */
+export async function upsertTemplate(doc: TemplatePayload): Promise<TemplateDetail> {
+  try {
+    return await createTemplate(doc);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 409) return replaceTemplate(doc);
+    throw e;
+  }
+}
+
+/** Archives ("deletes") a template. Already gone counts as done. */
+export async function archiveTemplate(id: string): Promise<void> {
+  try {
+    await call<void>(`/api/templates/${id}`, { method: "DELETE" });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return;
+    throw e;
   }
 }

@@ -64,7 +64,7 @@ Other local URLs: Supabase Studio <http://127.0.0.1:54323>, API
 | `pnpm typecheck` | `next typegen` + `tsc --noEmit` |
 | `pnpm lint` | ESLint |
 | `pnpm test` | Unit tests: `tests/unit/**/*.test.ts` and `lib/**/*.test.ts` |
-| `pnpm test:db` | DB tests in `tests/db/` (needs `db:start` running): RLS isolation, constraints, seed idempotency, schema drift, the activity save/search functions |
+| `pnpm test:db` | DB tests in `tests/db/` (needs `db:start` running): RLS isolation, constraints, seed idempotency, schema drift, the activity save/search functions, template (Regulars) save, archive and usage counts |
 | `pnpm test:e2e` | Playwright happy paths in `tests/e2e/` (phone viewport). Needs the stack running + seeded, `pnpm build`, and `SUPABASE_SERVICE_ROLE_KEY` from `pnpm exec supabase status -o env` (used to mint a magic-link sign-in for a fresh test user). First time: `pnpm exec playwright install chromium` |
 | `pnpm db:start` / `db:stop` / `db:status` | Local Supabase stack |
 | `pnpm db:migrate` / `db:reset` | Apply pending migrations / rebuild the DB from scratch |
