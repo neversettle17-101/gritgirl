@@ -66,17 +66,22 @@ test("create a run regular, ring it up, finish: used count goes up and it can be
 });
 
 test("save a strength slip as a new regular, ring it up pre-filled from last time, then archive it", async ({ page }) => {
-  const name = `E2E Legs ${tag()}`;
+  const t = tag();
+  const name = `E2E Legs ${t}`;
+  // A fresh custom exercise, so "last time" is only what this test logs
+  // (library exercises carry history from the other specs).
+  const ex = `E2E Thrust ${t}`;
 
   await page.goto("/log/strength");
   await expect(page.getByRole("heading", { name: /Heavy items/ })).toBeVisible();
   await page.getByRole("button", { name: "+ ADD AN ITEM" }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("SEARCH EXERCISES").fill("barbell squat");
-  await dialog.getByRole("button", { name: /^Barbell Squat\b/ }).first().click();
-  await page.getByLabel("Set 1 reps for Barbell Squat").fill("8");
-  await page.getByLabel("Set 1 weight in kg for Barbell Squat").fill("42.5");
-  await page.getByRole("button", { name: "Add a set of Barbell Squat" }).click();
+  await dialog.getByLabel("SEARCH EXERCISES").fill(ex);
+  await dialog.getByRole("button", { name: "CREATE & ADD" }).click();
+  await page.getByLabel(`Set 1 reps for ${ex}`).fill("8");
+  await page.getByLabel(`Set 1 weight in kg for ${ex}`).fill("42.5");
+  await page.getByRole("button", { name: `Add a set of ${ex}` }).click();
+  await expect(page.getByLabel(`Set 2 reps for ${ex}`)).toHaveValue("8");
 
   // Save as a new regular needs a name.
   await page.getByRole("button", { name: "SAVE AS A NEW REGULAR" }).click();
@@ -88,16 +93,16 @@ test("save a strength slip as a new regular, ring it up pre-filled from last tim
   // This workout counts as its first use.
   await page.goto("/regulars");
   await expect(card(page, name)).toContainText("USED 1×");
-  await expect(card(page, name)).toContainText("BARBELL SQUAT");
+  await expect(card(page, name)).toContainText(ex.toUpperCase());
   await expect(card(page, name)).toContainText("2×8 · 42.5 KG");
 
   // Ring it up: sets come from the last session.
   await card(page, name).getByRole("link", { name: `Ring up ${name}` }).click();
   await expect(page.getByRole("heading", { name: /Heavy items/ })).toBeVisible();
   await expect(page.getByText(`FROM REGULAR: ${name.toUpperCase()}`)).toBeVisible();
-  await page.getByRole("button", { name: /^Barbell Squat\s*2 × 8 reps/i }).click();
-  await expect(page.getByLabel("Set 2 reps for Barbell Squat")).toHaveValue("8");
-  await expect(page.getByLabel("Set 2 weight in kg for Barbell Squat")).toHaveValue("42.5");
+  await page.getByRole("button", { name: new RegExp(`^${ex}\\s*2 × 8 reps`, "i") }).click();
+  await expect(page.getByLabel(`Set 2 reps for ${ex}`)).toHaveValue("8");
+  await expect(page.getByLabel(`Set 2 weight in kg for ${ex}`)).toHaveValue("42.5");
   await printReceipt(page);
 
   await page.goto("/regulars");
