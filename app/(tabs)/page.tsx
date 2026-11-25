@@ -44,7 +44,7 @@ export default function Home() {
         <h2 id="ledgers" className="sr-only">
           Ledgers
         </h2>
-        <Suspense fallback={<LedgerCardsView numbers={{ day: null, week: null, month: null }} />}>
+        <Suspense fallback={<LedgerCardsView numbers={null} />}>
           <LedgerCards />
         </Suspense>
       </section>

@@ -12,7 +12,8 @@ const CARDS = [
 
 type Numbers = Record<(typeof CARDS)[number]["key"], number | null>;
 
-export function LedgerCardsView({ numbers }: { numbers: Numbers }) {
+/** `numbers` null = still loading (the Suspense fallback). */
+export function LedgerCardsView({ numbers }: { numbers: Numbers | null }) {
   return (
     <div className="grid grid-cols-3 gap-2">
       {CARDS.map((c) => (
@@ -22,8 +23,8 @@ export function LedgerCardsView({ numbers }: { numbers: Numbers }) {
           className={`flex flex-col gap-0.5 border-b-[3px] border-dashed border-blue bg-paper px-2.5 pt-2.5 pb-3 text-ink hover:-translate-y-0.5 ${c.tilt}`}
         >
           <span className="text-[10px] font-extrabold tracking-[0.1em] text-muted">{c.label}</span>
-          <span className="font-display text-[26px] leading-[1.1] font-extrabold" data-testid={`home-${c.key}`}>
-            {numbers[c.key] ?? "—"}
+          <span className="font-display text-[26px] leading-[1.1] font-extrabold" data-testid={numbers ? `home-${c.key}` : undefined}>
+            {numbers?.[c.key] ?? "—"}
           </span>
           <span className="text-[11px]">{c.unit}</span>
         </Link>
