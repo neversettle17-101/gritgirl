@@ -143,6 +143,7 @@ answer errors as `{ error: { code, message, fields? } }`.
 | `GET /api/exercises?q=&muscle=&equipment=&limit=` | Typo-tolerant search of the library + my custom exercises |
 | `POST /api/exercises` | Create a custom exercise |
 | `GET /api/exercises/:id/last` | My most recent sets for an exercise (pre-fill) |
+| `GET /api/board?view=day\|week\|month&date=` | Ledger payload: per-day minutes/distance by type, activity summaries, totals, streaks (day view adds full activities) |
 
 Requests run through supabase-js with the user's JWT, so RLS always applies.
 Saving a strength workout (activity + exercises + sets) and replacing one on
