@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ActivityDetail, ExerciseSummary, LastSets } from "@/lib/domain/activity-types";
+import { normalizeWeekStart, type WeekStart } from "@/lib/domain/board";
 import { todayIn } from "@/lib/domain/dates";
 import { DEFAULT_UNITS, type Units } from "@/lib/domain/units";
 import type { ActivityInput } from "@/lib/validation/activities";
@@ -33,16 +34,18 @@ export interface UserPrefs {
   timezone: string;
   /** today's date in the user's time zone */
   today: string;
+  /** 0 = Sunday, 1 = Monday … (user_settings.week_starts_on) */
+  weekStartsOn: WeekStart;
 }
 
 const DEFAULT_TZ = "Asia/Kolkata";
 
-/** Units and time zone from user_settings (a row exists for every user). */
+/** Units, time zone and week start from user_settings (a row exists for every user). */
 export async function getUserPrefs(supabase: SupabaseClient, now: Date = new Date()): Promise<UserPrefs> {
   const { data } = await supabase
     .from("user_settings")
-    .select("weight_unit, distance_unit, timezone")
-    .maybeSingle<{ weight_unit: "kg" | "lb"; distance_unit: "km" | "mi"; timezone: string }>();
+    .select("weight_unit, distance_unit, timezone, week_starts_on")
+    .maybeSingle<{ weight_unit: "kg" | "lb"; distance_unit: "km" | "mi"; timezone: string; week_starts_on: number }>();
   const timezone = data?.timezone || DEFAULT_TZ;
   return {
     units: {
@@ -51,6 +54,7 @@ export async function getUserPrefs(supabase: SupabaseClient, now: Date = new Dat
     },
     timezone,
     today: todayIn(timezone, now),
+    weekStartsOn: normalizeWeekStart(data?.week_starts_on),
   };
 }
 
@@ -67,6 +71,21 @@ export async function listActivities(
     .returns<ActivityRow[]>();
   if (error) return fail(error);
   return ok((data ?? []).map(mapActivity).sort(compareActivitiesDesc));
+}
+
+/** Dates (one per activity, may repeat) with at least one activity in from..to: for streaks. */
+export async function listActivityDates(
+  supabase: SupabaseClient,
+  range: { from: string; to: string },
+): Promise<Result<string[]>> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("date")
+    .gte("date", range.from)
+    .lte("date", range.to)
+    .returns<{ date: string }[]>();
+  if (error) return fail(error);
+  return ok((data ?? []).map((r) => r.date));
 }
 
 export async function getActivity(supabase: SupabaseClient, id: string): Promise<Result<ActivityDetail | null>> {

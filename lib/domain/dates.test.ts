@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import * as d from "./dates";
 import { addDays, daysBetween, formatReceiptDate, isIsoDate, timeIn, todayIn } from "./dates";
 
 describe("dates", () => {
@@ -26,5 +27,19 @@ describe("dates", () => {
   });
   it("formats receipt dates", () => {
     expect(formatReceiptDate("2026-11-28")).toBe("SAT 28 NOV");
+  });
+});
+
+describe("ledger labels", () => {
+  it("weekday and month names", () => {
+    expect(d.weekdayShort("2026-11-25")).toBe("WED");
+    expect(d.weekdayLong("2026-11-29")).toBe("Sunday");
+    expect(d.monthLong("2026-11-29")).toBe("November");
+    expect(d.formatMonthYear("2027-01-01")).toBe("JAN 2027");
+  });
+
+  it("week spans", () => {
+    expect(d.formatSpan("2026-11-23", "2026-11-29")).toBe("23 – 29 NOV");
+    expect(d.formatSpan("2026-11-30", "2026-12-06")).toBe("30 NOV – 6 DEC");
   });
 });
