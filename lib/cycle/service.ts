@@ -16,8 +16,14 @@ import {
   type CycleSummary,
   type FlowLevel,
 } from "@/lib/domain/cycle";
-import { calendarToDays, type CycleCalendarDay, type LoggedDay } from "@/lib/domain/cycle-view";
-import { addDays, eachDay, todayIn } from "@/lib/domain/dates";
+import {
+  calendarToDays,
+  groupPeriods,
+  type CycleCalendarDay,
+  type LoggedDay,
+  type LoggedPeriod,
+} from "@/lib/domain/cycle-view";
+import { addDays, eachDay, isIsoDate, monthBounds, todayIn } from "@/lib/domain/dates";
 import type {
   DateRangeQuery,
   OnboardingBody,
@@ -159,16 +165,39 @@ function engineSettings(s: Settings): CycleSettings {
 
 export type CycleSummaryResponse = CycleSummary & { predictionsOn: boolean };
 
+/** Engine summary for `today` from already-loaded settings and logs. */
+export function summaryFrom(
+  settings: Settings,
+  days: readonly LoggedDay[],
+  today: string,
+): CycleSummaryResponse {
+  const summary = computeCycleSummary(days, engineSettings(settings), today, {
+    lastPeriodStart: settings.lastPeriodStart,
+  });
+  return { ...summary, predictionsOn: settings.cyclePredictionsOn };
+}
+
+/** Engine calendar for `range` from already-loaded settings and logs. */
+export function calendarFrom(
+  settings: Settings,
+  days: readonly LoggedDay[],
+  range: { from: string; to: string },
+  today: string,
+): CycleCalendarDay[] {
+  return calendarToDays(
+    computeCycleCalendar(days, engineSettings(settings), range, {
+      lastPeriodStart: settings.lastPeriodStart,
+      today,
+    }),
+  );
+}
+
 export async function getCycleSummary(
   repo: CycleRepo,
   opts: { today?: string; now?: Date } = {},
 ): Promise<CycleSummaryResponse> {
   const [settings, days] = await Promise.all([getSettings(repo), repo.listPeriodDays()]);
-  const today = opts.today ?? userToday(settings, opts.now);
-  const summary = computeCycleSummary(days, engineSettings(settings), today, {
-    lastPeriodStart: settings.lastPeriodStart,
-  });
-  return { ...summary, predictionsOn: settings.cyclePredictionsOn };
+  return summaryFrom(settings, days, opts.today ?? userToday(settings, opts.now));
 }
 
 export async function getCycleCalendar(
@@ -177,11 +206,45 @@ export async function getCycleCalendar(
   opts: { now?: Date } = {},
 ): Promise<CycleCalendarDay[]> {
   const [settings, days] = await Promise.all([getSettings(repo), repo.listPeriodDays()]);
-  const calendar = computeCycleCalendar(days, engineSettings(settings), range, {
-    lastPeriodStart: settings.lastPeriodStart,
-    today: userToday(settings, opts.now),
-  });
-  return calendarToDays(calendar);
+  return calendarFrom(settings, days, range, userToday(settings, opts.now));
+}
+
+/** Everything the /cycle screen shows, from one settings + logs load. */
+export interface CycleView {
+  today: string;
+  /** First day of the month shown in the calendar (`YYYY-MM-01`). */
+  month: string;
+  summary: CycleSummaryResponse;
+  /** Current cycle, start → expected end (or today, if later). Empty if unknown. */
+  band: CycleCalendarDay[];
+  /** Month grid days. */
+  calendar: CycleCalendarDay[];
+  /** Logged periods, newest first. */
+  periods: LoggedPeriod[];
+}
+
+export function buildCycleView(
+  settings: Settings,
+  days: readonly LoggedDay[],
+  today: string,
+  month?: string | null,
+): CycleView {
+  const summary = summaryFrom(settings, days, today);
+  let band: CycleCalendarDay[] = [];
+  if (summary.currentCycleStart) {
+    const expectedEnd = addDays(summary.currentCycleStart, summary.expectedCycleLen - 1);
+    const to = expectedEnd > today ? expectedEnd : today;
+    band = calendarFrom(settings, days, { from: summary.currentCycleStart, to }, today);
+  }
+  const bounds = monthBounds(month && isIsoDate(`${month}-01`) ? `${month}-01` : today);
+  return {
+    today,
+    month: bounds.from,
+    summary,
+    band,
+    calendar: calendarFrom(settings, days, bounds, today),
+    periods: groupPeriods(days).reverse(),
+  };
 }
 
 export type { FlowLevel };

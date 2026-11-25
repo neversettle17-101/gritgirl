@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import type { z } from "zod";
 import { ApiError } from "@/lib/cycle/service";
 import { fieldErrors } from "@/lib/validation/cycle";
@@ -46,6 +47,8 @@ export async function handle(fn: () => Promise<Response>): Promise<Response> {
   try {
     return await fn();
   } catch (err) {
+    // Let Next's own control-flow errors (prerender bail-out, redirect) through.
+    unstable_rethrow(err);
     if (err instanceof ApiError) return errorResponse(err.status, err.code, err.message, err.fields);
     console.error("[api] unexpected error:", err instanceof Error ? err.message : "unknown");
     return errorResponse(500, "internal", "Something went wrong");

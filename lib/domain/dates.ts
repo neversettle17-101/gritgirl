@@ -69,3 +69,27 @@ export function monthBounds(date: string): { from: string; to: string } {
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return { from, to: `${from.slice(0, 8)}${String(last).padStart(2, "0")}` };
 }
+
+const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+/** "25 NOV" (receipt style). */
+export function shortDate(date: string): string {
+  const [, m, d] = date.split("-").map(Number) as [number, number, number];
+  return `${d} ${MONTHS[m - 1]}`;
+}
+
+/** "NOV 2026". */
+export function monthLabel(date: string): string {
+  const [y, m] = date.split("-").map(Number) as [number, number];
+  return `${MONTHS[m - 1]} ${y}`;
+}
+
+/** 0 = Sunday … 6 = Saturday. */
+export function weekday(date: string): number {
+  return new Date(`${date}T00:00:00Z`).getUTCDay();
+}
+
+export function weekdayShort(day: number): string {
+  return WEEKDAYS[day]!;
+}

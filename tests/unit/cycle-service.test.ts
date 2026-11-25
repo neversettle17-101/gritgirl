@@ -175,3 +175,27 @@ describe("cycle summary and calendar", () => {
     expect(nextStart).toMatchObject({ phase: "menstrual", isPeriod: false, predicted: true, cycleDay: 1 });
   });
 });
+
+describe("buildCycleView", () => {
+  it("builds the /cycle screen from one load", async () => {
+    const { buildCycleView } = await import("@/lib/cycle/service");
+    const { DEFAULT_SETTINGS } = await import("./support/fake-cycle-repo");
+    const days = [
+      { date: "2026-10-01", flow: "heavy" as const },
+      { date: "2026-10-02", flow: null },
+      { date: "2026-10-29", flow: "medium" as const },
+      { date: "2026-10-30", flow: null },
+    ];
+    const v = buildCycleView(DEFAULT_SETTINGS, days, "2026-11-10", "2026-10");
+    expect(v.month).toBe("2026-10-01");
+    expect(v.calendar).toHaveLength(31);
+    expect(v.band[0]!.date).toBe("2026-10-29");
+    expect(v.band).toHaveLength(28);
+    expect(v.periods.map((p) => p.start)).toEqual(["2026-10-29", "2026-10-01"]);
+    // Bad month falls back to today's month; no logs → empty band.
+    const empty = buildCycleView(DEFAULT_SETTINGS, [], "2026-11-10", "2026-13");
+    expect(empty.month).toBe("2026-11-01");
+    expect(empty.band).toEqual([]);
+    expect(empty.periods).toEqual([]);
+  });
+});
