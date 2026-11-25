@@ -55,8 +55,8 @@ async function ProfileBody() {
       </div>
 
       <div className="mt-5 flex flex-col gap-5">
-        <BodyWeightCard entries={weights.data} unit={p.weightUnit} today={prefs.today} />
         <ProfileEditor profile={p} today={prefs.today} />
+        <BodyWeightCard entries={weights.data} unit={p.weightUnit} today={prefs.today} />
       </div>
     </>
   );
