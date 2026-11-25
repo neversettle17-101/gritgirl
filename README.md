@@ -65,6 +65,7 @@ Other local URLs: Supabase Studio <http://127.0.0.1:54323>, API
 | `pnpm lint` | ESLint |
 | `pnpm test` | Unit tests: `tests/unit/**/*.test.ts` and `lib/**/*.test.ts` |
 | `pnpm test:db` | DB tests in `tests/db/` (needs `db:start` running): RLS isolation, constraints, seed idempotency, schema drift |
+| `pnpm test:e2e` | Playwright (phone + desktop) against `next start` + local Supabase. Run `pnpm build` first; `pnpm exec playwright install chromium` once |
 | `pnpm db:start` / `db:stop` / `db:status` | Local Supabase stack |
 | `pnpm db:migrate` / `db:reset` | Apply pending migrations / rebuild the DB from scratch |
 | `pnpm seed:exercises` | Import `data/vendor/free-exercise-db/exercises.json` |
@@ -84,7 +85,8 @@ db/migrations/             SQL migrations (schema, RLS). supabase/migrations is 
 supabase/config.toml       Local Supabase config
 data/vendor/free-exercise-db/  Pinned exercises.json + LICENSE.md (The Unlicense)
 scripts/                   seed-exercises.ts, write-local-env.ts
-tests/unit/  tests/db/     Vitest suites (tests/e2e/ is reserved for Playwright)
+tests/unit/  tests/db/     Vitest suites
+tests/e2e/                 Playwright end-to-end tests
 ```
 
 ## Database
@@ -122,6 +124,11 @@ Notes on the schema decisions:
   cascade remove a user's custom exercises along with the rows that use them.
   Deleting a custom exercise that is still in use is still rejected.
 - **Default settings.** Every new user automatically gets a `user_settings` row.
+  Because the row always exists, onboarding is tracked by `user_settings.onboarded_at`
+  (null until the onboarding form is submitted), not by the row's existence.
+- **Period logging is atomic.** `PUT /api/period-days` calls the
+  `replace_period_days(from, to, days)` function (security invoker, so RLS applies):
+  the logged days in the range become exactly `days` in one transaction.
 
 The app talks to the database with the signed-in user's JWT (supabase-js, or
 Drizzle inside `asUser()` from `lib/db/rls.ts`), so RLS always applies. The
@@ -142,11 +149,31 @@ Exercises with `force = "static"` (plank, side bridge, isometric holds, static
 stretches) get `tracking = 'time'`. All others get `reps`. Search uses a
 `pg_trgm` GIN index on `name`, which makes it typo-tolerant.
 
+## Cycle tracking
+
+`lib/domain/cycle.ts` is the pure phase engine (technical design §9). Nothing
+derived is stored. The API recomputes phases from `period_days` + `user_settings`
+on every request:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/period-days?from&to` | Logged days `{ date, flow }` |
+| `PUT /api/period-days` | `{ action: "set", from, to, flow?, flows? }` · `{ action: "clear", from, to }` · `{ action: "replace", from, to, days }` |
+| `GET` / `PUT /api/settings` | Units, week start, time zone, cycle defaults, predictions toggle, name, last period start. `completeOnboarding: true` finishes onboarding |
+| `GET /api/cycle/summary[?today]` | Current phase, cycle day, next period estimate, average lengths |
+| `GET /api/cycle/calendar?from&to` | Per-day `{ date, phase, cycleDay, isPeriod, flow, predicted }` for the ledgers |
+
+Screens: `/onboarding` (first sign-in), `/cycle` (cycle slip, month calendar,
+period log, log/edit sheet) and `/settings`. `components/cycle/phase-band.tsx`
+exports `PhaseBand` for the ledgers. Phases are always labelled as estimates.
+
 ## CI
 
-`.github/workflows/ci.yml` has two jobs:
+`.github/workflows/ci.yml` has three jobs:
 
 - **Checks:** typecheck, lint, unit tests, production build.
 - **Database:** starts a fresh local Supabase in the runner, applies all
   migrations (`supabase start` + `supabase db reset`), runs `supabase db lint`,
   seeds the exercises and runs the DB test suite.
+- **End-to-end:** starts Supabase, builds the app and runs Playwright on phone and
+  desktop viewports. The HTML report (with screenshots) is uploaded as an artifact.
