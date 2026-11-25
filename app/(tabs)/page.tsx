@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { RecentOrders } from "@/components/recent-orders";
+import { TheUsual } from "@/components/regulars/the-usual";
 import { SignedInAs } from "@/components/signed-in-as";
 import { placeholderTag, TypeBadge } from "@/components/ui";
 import { listActivities } from "@/lib/activities/repo";
@@ -66,21 +67,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Regulars (templates): placeholder until the templates milestone (M4). */}
       <section aria-labelledby="usual" className="mt-6">
         <div className="flex items-baseline justify-between text-white">
           <h2 id="usual" className="text-[13px] font-extrabold tracking-[0.1em]">
             THE USUAL?
           </h2>
-          <span className="py-2.5 text-xs font-extrabold opacity-70">ALL REGULARS →</span>
+          <Link href="/regulars" className="py-2.5 text-xs font-extrabold text-white hover:text-yellow">
+            ALL REGULARS →
+          </Link>
         </div>
-        <div className="mt-1 border-2 border-dashed border-paper/70 p-3 text-white">
-          <span className={placeholderTag}>COMING SOON</span>
-          <p className="mt-1.5 text-xs leading-relaxed">
-            Your regulars (saved runs, walks and lifts you can ring up in one tap) arrive in the next
-            update. Order fresh for now.
-          </p>
-        </div>
+        <Suspense fallback={<div className="mt-1 h-[120px] animate-pulse bg-paper/40" />}>
+          <TheUsual />
+        </Suspense>
       </section>
 
       <section aria-labelledby="fresh">

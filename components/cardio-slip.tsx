@@ -14,8 +14,11 @@ import {
   PrinterIcon,
   SlipHeader,
 } from "@/components/ui";
+import { FromRegularBanner, RegularOffer, useRegularOffer } from "@/components/regulars/slip-regular";
 import { ApiError, createActivity, replaceActivity } from "@/lib/client/api";
 import { cardioFormToPayload, newCardioForm, stepDistance, type CardioForm } from "@/lib/domain/cardio-form";
+import type { TemplateDetail } from "@/lib/domain/template-types";
+import { cardioFormDiffers, templateToCardioForm } from "@/lib/domain/templates";
 import { formatMinutes, formatPace, parseDecimal, parseDuration, toMetres, type DistanceUnit } from "@/lib/domain/units";
 import { uuid } from "@/lib/uuid";
 
@@ -27,17 +30,24 @@ interface Props {
   today?: string;
   nowTime?: string;
   initial?: CardioForm;
+  /** new: the regular this slip was rung up from (pre-fills the targets) */
+  regular?: TemplateDetail;
 }
 
 /** Run / walk order slip (mockup 5): distance, duration, time, HR, feel, comments, derived pace. */
-export function CardioSlip({ mode, type, distanceUnit, today, nowTime, initial }: Props) {
+export function CardioSlip({ mode, type, distanceUnit, today, nowTime, initial, regular }: Props) {
   const router = useRouter();
-  const [form, setForm] = useState<CardioForm>(
-    () => initial ?? newCardioForm({ id: uuid(), type, date: today ?? "", startTime: nowTime }),
-  );
+  const [form, setForm] = useState<CardioForm>(() => {
+    if (initial) return initial;
+    const o = { id: uuid(), type, date: today ?? "", startTime: nowTime };
+    return regular ? templateToCardioForm(regular, o, distanceUnit) : newCardioForm(o);
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const changed = regular ? cardioFormDiffers(form, distanceUnit, regular) : false;
+  const offer = useRegularOffer(regular, changed);
 
   const set = <K extends keyof CardioForm>(k: K, v: CardioForm[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -57,9 +67,20 @@ export function CardioSlip({ mode, type, distanceUnit, today, nowTime, initial }
       return;
     }
     setErrors({});
+    if (mode === "new" && !offer.check()) return;
     setSaving(true);
     try {
-      const saved = mode === "new" ? await createActivity(r.payload) : await replaceActivity(r.payload);
+      let payload = r.payload;
+      if (mode === "new") {
+        const reg = await offer.apply(payload);
+        if (!reg.ok) {
+          setSaving(false);
+          setFormError(reg.message);
+          return;
+        }
+        payload = { ...payload, templateId: reg.templateId };
+      }
+      const saved = mode === "new" ? await createActivity(payload) : await replaceActivity(payload);
       router.push(`/activities/${saved.id}?printed=1`);
     } catch (err) {
       setSaving(false);
@@ -101,6 +122,7 @@ export function CardioSlip({ mode, type, distanceUnit, today, nowTime, initial }
         noValidate
         className="mt-4 bg-paper p-4 text-xs text-ink shadow-[0_12px_30px_rgba(0,0,0,0.25)]"
       >
+        {regular ? <FromRegularBanner name={regular.name} /> : null}
         {mode === "edit" ? (
           <div role="group" aria-label="Type" className="-m-1 mb-3 flex gap-2">
             {(["running", "walking"] as const).map((t) => (
@@ -242,6 +264,13 @@ export function CardioSlip({ mode, type, distanceUnit, today, nowTime, initial }
           className="mt-1 w-full border-2 border-ink bg-white p-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-blue"
         />
         <FieldError message={errors.notes} />
+
+        {mode === "new" ? (
+          <>
+            <Dashed className="mt-2.5 mb-1.5" />
+            <RegularOffer regular={regular} changed={changed} offer={offer} />
+          </>
+        ) : null}
 
         <Dashed className="my-2" />
         <div className="flex justify-between text-sm font-extrabold">

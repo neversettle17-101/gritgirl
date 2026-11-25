@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { ExerciseItem } from "@/components/strength/exercise-item";
 import { ExercisePicker } from "@/components/strength/exercise-picker";
+import { FromRegularBanner, RegularOffer, useRegularOffer } from "@/components/regulars/slip-regular";
 import {
   Dashed,
   FeelPicker,
@@ -16,7 +17,9 @@ import {
   SlipHeader,
 } from "@/components/ui";
 import { ApiError, createActivity, lastSets, replaceActivity } from "@/lib/client/api";
-import type { ActivityDetail, ExerciseSummary } from "@/lib/domain/activity-types";
+import type { ActivityDetail, ExerciseSummary, LastSets } from "@/lib/domain/activity-types";
+import type { TemplateDetail } from "@/lib/domain/template-types";
+import { strengthDraftDiffers, templateToStrengthDraft } from "@/lib/domain/templates";
 import {
   activityToDraft,
   addExercise,
@@ -48,6 +51,10 @@ interface Props {
   nowTime?: string;
   /** edit mode: the saved workout */
   activity?: ActivityDetail;
+  /** new: the regular this slip was rung up from */
+  regular?: TemplateDetail;
+  /** the last logged sets of each of the regular's exercises (pre-fill) */
+  lasts?: Record<string, LastSets | null>;
 }
 
 const noopSubscribe = () => () => {};
@@ -68,17 +75,17 @@ export function StrengthSlip(props: Props) {
   return <StrengthSlipInner {...props} />;
 }
 
+function freshDraft(p: Props, date?: string): StrengthDraft {
+  if (p.mode === "edit" && p.activity) return activityToDraft(p.activity, p.weightUnit, uuid);
+  const o = { id: uuid(), date: p.today ?? date ?? "", startTime: p.nowTime, weightUnit: p.weightUnit };
+  return p.regular ? templateToStrengthDraft(p.regular, p.lasts ?? {}, o, uuid) : newDraft(o);
+}
+
 function loadInitial(p: Props): { draft: StrengthDraft; restored: boolean } {
-  const key = draftStorageKey(p.mode, p.activity?.id);
+  const key = draftStorageKey(p.mode, p.activity?.id, p.regular?.id);
   const stored = parseStoredDraft(window.localStorage.getItem(key));
   if (stored && (p.mode === "new" || stored.id === p.activity?.id)) return { draft: stored, restored: true };
-  if (p.mode === "edit" && p.activity) {
-    return { draft: activityToDraft(p.activity, p.weightUnit, uuid), restored: false };
-  }
-  return {
-    draft: newDraft({ id: uuid(), date: p.today ?? "", startTime: p.nowTime, weightUnit: p.weightUnit }),
-    restored: false,
-  };
+  return { draft: freshDraft(p), restored: false };
 }
 
 function StrengthSlipInner(props: Props) {
@@ -96,7 +103,9 @@ function StrengthSlipInner(props: Props) {
   const [now, setNow] = useState(() => Date.now());
   const draftRef = useRef(draft);
   const savedRef = useRef(false);
-  const storageKey = draftStorageKey(mode, props.activity?.id);
+  const storageKey = draftStorageKey(mode, props.activity?.id, props.regular?.id);
+  const changed = props.regular ? strengthDraftDiffers(draft, props.regular) : false;
+  const offer = useRegularOffer(props.regular, changed);
 
   useEffect(() => {
     draftRef.current = draft;
@@ -150,11 +159,7 @@ function StrengthSlipInner(props: Props) {
 
   function startOver() {
     window.localStorage.removeItem(storageKey);
-    const fresh =
-      mode === "edit" && props.activity
-        ? activityToDraft(props.activity, props.weightUnit, uuid)
-        : newDraft({ id: uuid(), date: props.today ?? draft.date, startTime: props.nowTime, weightUnit: props.weightUnit });
-    setDraft(fresh);
+    setDraft(freshDraft(props, draft.date));
     setRestored(false);
     setErrors({});
     setExpanded(new Set());
@@ -170,9 +175,20 @@ function StrengthSlipInner(props: Props) {
       return;
     }
     setErrors({});
+    if (mode === "new" && !offer.check()) return;
     setSaving(true);
     try {
-      const saved = mode === "new" ? await createActivity(r.payload) : await replaceActivity(r.payload);
+      let payload = r.payload;
+      if (mode === "new") {
+        const reg = await offer.apply(payload);
+        if (!reg.ok) {
+          setSaving(false);
+          setFormError(reg.message);
+          return;
+        }
+        payload = { ...payload, templateId: reg.templateId };
+      }
+      const saved = mode === "new" ? await createActivity(payload) : await replaceActivity(payload);
       savedRef.current = true;
       window.localStorage.removeItem(storageKey);
       router.push(`/activities/${saved.id}?printed=1`);
@@ -244,6 +260,7 @@ function StrengthSlipInner(props: Props) {
         noValidate
         className="mt-4 bg-paper p-4 text-xs text-ink shadow-[0_12px_30px_rgba(0,0,0,0.25)]"
       >
+        {props.regular ? <FromRegularBanner name={props.regular.name} /> : null}
         <div className="flex items-center justify-between gap-2">
           <span className={labelClass}>WORKOUT TIMER</span>
           <span className="font-display text-2xl font-extrabold tabular-nums" aria-label="Elapsed time" role="timer">
@@ -380,6 +397,13 @@ function StrengthSlipInner(props: Props) {
           className="mt-1 w-full border-2 border-ink bg-white p-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-blue"
         />
         <FieldError message={errors.notes} />
+
+        {mode === "new" ? (
+          <>
+            <Dashed className="mt-2.5 mb-1.5" />
+            <RegularOffer regular={props.regular} changed={changed} offer={offer} />
+          </>
+        ) : null}
 
         {formError || Object.keys(errors).length ? (
           <p role="alert" className="mt-3 border-2 border-red px-2.5 py-2 font-extrabold text-red">

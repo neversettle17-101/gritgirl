@@ -49,10 +49,10 @@ export interface DbError {
  * and cast failures are the client's fault (422); unknown errors are 500 and
  * logged by code only.
  */
-export function dbErrorResponse(err: DbError, context: string): Response {
+export function dbErrorResponse(err: DbError, context: string, notFoundMessage = "Activity not found"): Response {
   switch (err.code) {
     case "P0002":
-      return notFound("Activity not found");
+      return notFound(notFoundMessage);
     case "23503":
       return apiError(422, "validation_failed", "One of the exercises does not exist", {
         exercises: "Unknown exercise",
