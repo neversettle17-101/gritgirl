@@ -201,6 +201,11 @@ export const userSettings = pgTable("user_settings", {
   defaultCycleLen: smallint("default_cycle_len").notNull().default(28),
   defaultPeriodLen: smallint("default_period_len").notNull().default(5),
   cyclePredictionsOn: boolean("cycle_predictions_on").notNull().default(true),
+  displayName: text("display_name"),
+  /** Onboarding "last period start" (CYC-3); only used while no period days are logged. */
+  lastPeriodStart: date("last_period_start", { mode: "string" }),
+  /** Null until the onboarding form is submitted. */
+  onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
   ...timestamps,
 });
 
