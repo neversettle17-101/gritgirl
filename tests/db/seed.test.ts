@@ -65,8 +65,8 @@ describe("seed-exercises", () => {
     const rows = await db
       .select({ name: exercises.name })
       .from(exercises)
-      .where(sql`${exercises.name} operator(extensions.%) ${"squt"}`)
-      .orderBy(sql`extensions.similarity(${exercises.name}, ${"squt"}) desc`)
+      .where(sql`extensions.word_similarity(${"squt"}, ${exercises.name}) > 0.3`)
+      .orderBy(sql`extensions.word_similarity(${"squt"}, ${exercises.name}) desc`, exercises.name)
       .limit(10);
     expect(rows.some((r) => /squat/i.test(r.name))).toBe(true);
   });

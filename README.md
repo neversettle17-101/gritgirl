@@ -117,6 +117,10 @@ Notes on the schema decisions:
   signed-in user. Library rows can only be written by the seed script. The
   `anon` role has no access.
 - **Account deletion.** Deleting an account (`auth.users`) cascades to all of the user's data.
+  The `exercise_id` foreign keys on `activity_exercises` and `template_exercises` are
+  `deferrable initially deferred`, so they are checked at commit. That lets the
+  cascade remove a user's custom exercises along with the rows that use them.
+  Deleting a custom exercise that is still in use is still rejected.
 - **Default settings.** Every new user automatically gets a `user_settings` row.
 
 The app talks to the database with the signed-in user's JWT (supabase-js, or

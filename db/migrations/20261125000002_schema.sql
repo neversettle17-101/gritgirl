@@ -75,7 +75,10 @@ create index workout_templates_user_idx on public.workout_templates (user_id, ty
 create table public.template_exercises (
   id                  uuid primary key default gen_random_uuid(),
   template_id         uuid not null references public.workout_templates (id) on delete cascade,
-  exercise_id         uuid not null references public.exercises (id),
+  -- Deferred: checked at commit, so deleting an account can cascade away the
+  -- user's custom exercises and the rows that use them in one statement.
+  -- Deleting a custom exercise that is still in use is still rejected.
+  exercise_id         uuid not null references public.exercises (id) deferrable initially deferred,
   position            smallint not null,
   target_sets         smallint not null default 3,
   target_reps         smallint null,
@@ -133,7 +136,8 @@ create index activities_template_idx on public.activities (template_id) where te
 create table public.activity_exercises (
   id          uuid primary key default gen_random_uuid(),
   activity_id uuid not null references public.activities (id) on delete cascade,
-  exercise_id uuid not null references public.exercises (id),
+  -- Deferred for the same reason as template_exercises.exercise_id.
+  exercise_id uuid not null references public.exercises (id) deferrable initially deferred,
   position    smallint not null,
   notes       text null,
   created_at  timestamptz not null default now(),
@@ -215,11 +219,15 @@ group by t.id, t.user_id;
 
 -- ───────────────────────── integrity triggers ─────────────────────────
 -- Exercises and sets only belong to strength workouts/templates. These are
--- cross-table rules, which CHECK constraints cannot express.
+-- cross-table rules, which CHECK constraints cannot express. The two parent
+-- lookups run as security definer so they see the parent regardless of RLS;
+-- ownership itself is still enforced by the RLS policies (which then reject
+-- cross-user writes with an RLS error rather than this check).
 
 create function public.assert_strength_activity()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 begin
@@ -234,6 +242,8 @@ begin
 end;
 $$;
 
+revoke execute on function public.assert_strength_activity() from public, anon, authenticated;
+
 create trigger activity_exercises_strength_only
 before insert or update of activity_id on public.activity_exercises
 for each row execute function public.assert_strength_activity();
@@ -241,6 +251,7 @@ for each row execute function public.assert_strength_activity();
 create function public.assert_strength_template()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 begin
@@ -254,6 +265,8 @@ begin
   return new;
 end;
 $$;
+
+revoke execute on function public.assert_strength_template() from public, anon, authenticated;
 
 create trigger template_exercises_strength_only
 before insert or update of template_id on public.template_exercises

@@ -225,7 +225,7 @@ describe("exercises", () => {
       { code: CHECK, constraint: "exercises_library_or_custom" },
     );
     await expectPgError(
-      db.insert(exercises).values({ ownerUserId: user, source: "wger" as "custom", name: "Unknown source" }),
+      db.insert(exercises).values({ source: "wger" as "custom", sourceId: "x", name: "Unknown source" }),
       { code: CHECK, constraint: "exercises_source_known" },
     );
   });
