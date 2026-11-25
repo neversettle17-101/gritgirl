@@ -61,3 +61,52 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       - if: always()
         run: pnpm exec supabase stop --no-backup
+
+  e2e:
+    name: End-to-end (Playwright, phone viewport)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Start Supabase (applies migrations)
+        run: pnpm exec supabase start -x studio,imgproxy,vector,logflare,supavisor,postgres-meta,realtime,storage-api,edge-runtime
+      - name: Seed exercise library
+        run: pnpm seed:exercises
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      - name: Export local Supabase URL and keys
+        run: |
+          pnpm exec supabase status -o json | node -e '
+            let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => {
+              const j = JSON.parse(s.slice(s.indexOf("{")));
+              const out = {
+                NEXT_PUBLIC_SUPABASE_URL: j.API_URL,
+                NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: j.PUBLISHABLE_KEY ?? j.ANON_KEY,
+                SUPABASE_SERVICE_ROLE_KEY: j.SERVICE_ROLE_KEY ?? j.SECRET_KEY,
+              };
+              for (const [k, v] of Object.entries(out)) {
+                if (!v) throw new Error(`missing ${k}`);
+                console.log(`::add-mask::${v}`);
+                require("fs").appendFileSync(process.env.GITHUB_ENV, `${k}=${v}\n`);
+              }
+            });'
+      - run: pnpm build
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Playwright
+        run: pnpm exec playwright test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+      - if: always()
+        run: pnpm exec supabase stop --no-backup
