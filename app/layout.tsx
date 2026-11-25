@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
+import { UndoDeleteProvider } from "@/components/undo-delete";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -27,7 +28,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${bricolage.variable} ${jetbrains.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <UndoDeleteProvider>{children}</UndoDeleteProvider>
+      </body>
     </html>
   );
 }
