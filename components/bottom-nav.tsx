@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /**
- * Bottom navigation (mockup 0-home): HOME · DAY · WEEK · MONTH, plus CYCLE.
+ * Bottom navigation (mockup 0-home): HOME · DAY · WEEK · MONTH.
  * Uses usePathname, so render it inside <Suspense> (Cache Components).
  */
 export const NAV_ITEMS = [
@@ -12,7 +12,6 @@ export const NAV_ITEMS = [
   { href: "/day", label: "DAY" },
   { href: "/week", label: "WEEK" },
   { href: "/month", label: "MONTH" },
-  { href: "/cycle", label: "CYCLE" },
 ] as const;
 
 function isActive(pathname: string, href: string) {
