@@ -76,7 +76,7 @@ async function ReceiptScreen({
       <div className={`${printed ? "mt-20" : "mt-8"} flex flex-col gap-2.5`}>
         {printed ? (
           <>
-            <Link href="/day" className={bigButton}>
+            <Link href={`/day?date=${activity.date}`} className={bigButton}>
               SEE TODAY&apos;S LEDGER
             </Link>
             <Link href="/" className={outlineButton}>

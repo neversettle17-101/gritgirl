@@ -66,3 +66,40 @@ export function formatReceiptDate(isoDate: string): string {
   const d = new Date(`${isoDate}T00:00:00Z`);
   return `${DOW[d.getUTCDay()]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}`;
 }
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const utc = (isoDate: string) => new Date(`${isoDate}T00:00:00Z`);
+
+/** "MON" */
+export function weekdayShort(isoDate: string): string {
+  return DOW[utc(isoDate).getUTCDay()]!;
+}
+
+/** "Monday" */
+export function weekdayLong(isoDate: string): string {
+  return DAY_NAMES[utc(isoDate).getUTCDay()]!;
+}
+
+/** "November" */
+export function monthLong(isoDate: string): string {
+  return MONTH_NAMES[utc(isoDate).getUTCMonth()]!;
+}
+
+/** "NOV 2026" */
+export function formatMonthYear(isoDate: string): string {
+  const d = utc(isoDate);
+  return `${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+/** A week span: "23 – 29 NOV", or "30 NOV – 6 DEC" across months. */
+export function formatSpan(from: string, to: string): string {
+  const a = utc(from);
+  const b = utc(to);
+  if (a.getUTCMonth() === b.getUTCMonth()) return `${a.getUTCDate()} – ${b.getUTCDate()} ${MON[b.getUTCMonth()]}`;
+  return `${a.getUTCDate()} ${MON[a.getUTCMonth()]} – ${b.getUTCDate()} ${MON[b.getUTCMonth()]}`;
+}
