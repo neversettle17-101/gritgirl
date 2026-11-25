@@ -90,6 +90,11 @@ export function monthLong(isoDate: string): string {
   return MONTH_NAMES[utc(isoDate).getUTCMonth()]!;
 }
 
+/** "NOV" */
+export function monthShort(isoDate: string): string {
+  return MON[utc(isoDate).getUTCMonth()]!;
+}
+
 /** "NOV 2026" */
 export function formatMonthYear(isoDate: string): string {
   const d = utc(isoDate);

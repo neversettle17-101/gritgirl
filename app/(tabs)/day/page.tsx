@@ -56,7 +56,13 @@ async function DayLedger({ searchParams }: { searchParams: PageProps<"/day">["se
         units={prefs.units}
         date={date}
       />
-      <Link href="/" className={`mt-8 ${printButtonClass}`}>
+      <Link
+        href={`/week?date=${date}`}
+        className="mt-4 flex h-11 items-center justify-end text-xs font-extrabold tracking-[0.06em] text-white hover:text-yellow focus-visible:ring-2 focus-visible:ring-yellow"
+      >
+        THIS WEEK&apos;S STATEMENT →
+      </Link>
+      <Link href="/" className={`mt-4 ${printButtonClass}`}>
         <PrinterIcon />
         PRINT A WORKOUT
       </Link>

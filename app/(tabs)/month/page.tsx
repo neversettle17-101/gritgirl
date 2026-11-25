@@ -14,6 +14,9 @@ const MARKER: Record<ActivityType, { letter: string; className: string }> = {
   walking: { letter: "W", className: "size-3 border border-ink leading-[10px]" },
 };
 
+const footLink =
+  "flex h-11 items-center text-xs font-extrabold tracking-[0.06em] text-white hover:text-yellow focus-visible:ring-2 focus-visible:ring-yellow";
+
 function dayLabel(d: BoardDay, today: string) {
   const types = TYPE_ORDER.filter((t) => d.activities.some((a) => a.type === t));
   if (types.length) return types.map((t) => TYPE_LABEL[t]).join(" + ");
@@ -58,6 +61,8 @@ async function MonthLedger({ searchParams }: { searchParams: PageProps<"/month">
   const prev = addMonths(range.start, -1);
   const next = addMonths(range.start, 1);
   const header = days.slice(0, 7).map((d) => weekdayShort(d.date).charAt(0));
+  // The weekly statement for this month: this week if today is in it, else its first week.
+  const weekDate = prefs.today >= range.start && prefs.today <= range.end ? prefs.today : range.start;
 
   return (
     <LedgerPage>
@@ -115,6 +120,15 @@ async function MonthLedger({ searchParams }: { searchParams: PageProps<"/month">
           </span>
         </div>
       </div>
+
+      <nav aria-label="Other ledgers" className="mt-4 flex justify-between">
+        <Link href={`/week?date=${weekDate}`} className={footLink}>
+          WEEK BY WEEK →
+        </Link>
+        <Link href={`/year?date=${range.start}`} className={footLink}>
+          {range.start.slice(0, 4)} LEDGER →
+        </Link>
+      </nav>
     </LedgerPage>
   );
 }

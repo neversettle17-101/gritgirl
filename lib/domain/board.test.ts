@@ -9,6 +9,7 @@ import {
   endOfMonth,
   homeLedgerNumbers,
   longestStreak,
+  monthlyBreakdown,
   normalizeWeekStart,
   resolveRange,
   shiftDate,
@@ -16,6 +17,8 @@ import {
   streakReferenceDay,
   streakWindow,
   STREAK_LOOKBACK_DAYS,
+  strengthVolumeKg,
+  totalize,
 } from "./board";
 
 let seq = 0;
@@ -192,7 +195,77 @@ describe("aggregation", () => {
       walks: 1,
       strength: 1,
       distanceM: { running: 5000, walking: 1000 },
+      volumeKg: 0,
     });
+  });
+
+  it("strength volume is weight × reps over sets with both", () => {
+    const lift = act({
+      date: "2026-11-24",
+      type: "strength",
+      exercises: [
+        exercise([set({ reps: 8, weightKg: 40 }), set({ reps: 6, weightKg: 42.5 })], "Squat"),
+        exercise([set({ reps: 10 }), set({ durationSec: 45, weightKg: 10 })], "Plank"), // BW + timed: 0
+      ],
+    });
+    expect(strengthVolumeKg(lift)).toBe(575);
+    const days = aggregateDays([lift, act({ date: "2026-11-24", type: "running", durationSec: 600 })], week);
+    expect(days.find((d) => d.date === "2026-11-24")!.volumeKg).toBe(575);
+    expect(totalize(days).volumeKg).toBe(575);
+  });
+});
+
+describe("year view", () => {
+  it("runs 1 Jan to 31 Dec, unpadded", () => {
+    expect(resolveRange("year", "2026-11-25", 1)).toEqual({
+      view: "year",
+      date: "2026-11-25",
+      start: "2026-01-01",
+      end: "2026-12-31",
+      from: "2026-01-01",
+      to: "2026-12-31",
+    });
+  });
+
+  it("steps a year at a time (29 Feb clamps)", () => {
+    expect(shiftDate("year", "2026-01-01", -1)).toBe("2025-01-01");
+    expect(shiftDate("year", "2028-02-29", 1)).toBe("2029-02-28");
+  });
+
+  it("breaks the year down into twelve months", () => {
+    const year = resolveRange("year", "2026-06-15", 1);
+    const board = buildBoard({
+      range: year,
+      today: "2026-06-15",
+      activities: [
+        act({ date: "2026-01-05", type: "running", durationSec: 1800, distanceM: 5000 }),
+        act({ date: "2026-01-06", type: "running", durationSec: 1200, distanceM: 3000 }),
+        act({
+          date: "2026-03-10",
+          type: "strength",
+          durationSec: 2400,
+          exercises: [exercise([set({ reps: 5, weightKg: 60 })])],
+        }),
+        act({ date: "2026-12-31", type: "walking", durationSec: 600, distanceM: 1000 }),
+      ],
+      streakDates: [],
+    });
+    expect(board.days).toHaveLength(365);
+    expect(board.totals).toMatchObject({ workouts: 4, runs: 2, strength: 1, walks: 1, minutes: 100, volumeKg: 300 });
+    expect(board.streaks.longest).toBe(2);
+
+    const months = monthlyBreakdown(board);
+    expect(months.map((m) => m.month)).toEqual(eachDate("2026-01-01", "2026-12-31").filter((d) => d.endsWith("-01")));
+    expect(months[0]).toMatchObject({
+      workouts: 2,
+      activeDays: 2,
+      minutes: 50,
+      minutesByType: { running: 50, walking: 0, strength: 0 },
+      distanceM: { running: 8000, walking: 0 },
+    });
+    expect(months[1]).toMatchObject({ workouts: 0, minutes: 0, volumeKg: 0 });
+    expect(months[2]).toMatchObject({ strength: 1, volumeKg: 300, minutesByType: { strength: 40 } });
+    expect(months[11]).toMatchObject({ walks: 1, distanceM: { walking: 1000 } });
   });
 });
 

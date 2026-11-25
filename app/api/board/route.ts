@@ -7,10 +7,10 @@ import { fieldErrors } from "@/lib/validation/activities";
 import { boardQuerySchema } from "@/lib/validation/board";
 
 /**
- * GET /api/board?view=day|week|month&date=YYYY-MM-DD — the ledger payload
+ * GET /api/board?view=day|week|month|year&date=YYYY-MM-DD — the ledger payload
  * (§8.1): per-day minutes and distance by type, activity summaries, totals and
  * streaks. Weeks start on user_settings.week_starts_on; months are padded to
- * whole weeks. `date` defaults to today in the user's time zone.
+ * whole weeks; years run 1 Jan–31 Dec. `date` defaults to today in the user's time zone.
  */
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     date: params.get("date") ?? undefined,
   });
   if (!parsed.success) {
-    return apiError(400, "bad_request", "Pass view=day|week|month and date=YYYY-MM-DD", fieldErrors(parsed.error));
+    return apiError(400, "bad_request", "Pass view=day|week|month|year and date=YYYY-MM-DD", fieldErrors(parsed.error));
   }
 
   const prefs = await getUserPrefs(session.supabase);

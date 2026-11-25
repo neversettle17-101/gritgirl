@@ -3,7 +3,7 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
 /**
- * Stacked bar per day: active minutes split into run / strength / walk
+ * Stacked bar per day (or per month, on the Year ledger): active minutes split into run / strength / walk
  * (mockup 3 palette: run = ink, strength = red, walk = ink hatching).
  * The numbers are also in the rows below, so the chart is decorative for
  * screen readers apart from its summary label.
@@ -19,9 +19,19 @@ const INK = "#1B1B1B";
 const RED = "#E0412B";
 const WALK_PATTERN = "gg-walk-hatch";
 
-export function WeekChart({ days, summary }: { days: WeekChartDay[]; summary: string }) {
+export function WeekChart({
+  days,
+  summary,
+  testId = "week-chart",
+  height = 150,
+}: {
+  days: WeekChartDay[];
+  summary: string;
+  testId?: string;
+  height?: number;
+}) {
   return (
-    <figure aria-label={summary} className="m-0" data-testid="week-chart">
+    <figure aria-label={summary} className="m-0" data-testid={testId}>
       {/* The pattern lives in its own SVG so every bar can reference it. */}
       <svg width="0" height="0" aria-hidden="true" className="absolute">
         <defs>
@@ -30,7 +40,7 @@ export function WeekChart({ days, summary }: { days: WeekChartDay[]; summary: st
           </pattern>
         </defs>
       </svg>
-      <div aria-hidden="true" className="h-[150px] w-full">
+      <div aria-hidden="true" className="w-full" style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={days} margin={{ top: 6, right: 0, bottom: 0, left: 0 }} barCategoryGap="22%" accessibilityLayer={false}>
             <XAxis
