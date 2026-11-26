@@ -6,19 +6,19 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 /**
  * Bottom bar: HOME on the left, PROFILE on the right, and a ledger button in
- * the middle that pops up DAY · MONTH · YEAR. The Week statement is still
- * reachable from the Day and Month ledgers and the home cards.
+ * the middle that pops up DAY · WEEK · MONTH. The Year ledger is reached from
+ * the Month ledger's header.
  *
  * Uses usePathname, so render <BottomNav> inside <Suspense> (Cache
  * Components); <NavBar> without a pathname is the static fallback.
  */
 export const LEDGER_ITEMS = [
   { href: "/day", label: "DAY", hint: "RECEIPT" },
+  { href: "/week", label: "WEEK", hint: "STATEMENT" },
   { href: "/month", label: "MONTH", hint: "LEDGER" },
-  { href: "/year", label: "YEAR", hint: "REPORT" },
 ] as const;
 
-/** Ledger routes that light up the centre button (Week included, though it is not in the pop-up). */
+/** Ledger routes that light up the centre button (Year included, though it is not in the pop-up). */
 const LEDGER_PATHS = ["/day", "/week", "/month", "/year"];
 
 export function isActive(pathname: string, href: string) {

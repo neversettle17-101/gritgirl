@@ -65,9 +65,11 @@ test("log a run, then find it in the day, week, month and year ledgers", async (
   await todayCell.click();
   await expect(page.getByRole("heading", { name: /Today's\s+receipt/ })).toBeVisible();
 
-  // Year ledger: this month's row counts it, and so does the year total.
+  // Year ledger, from the Month ledger's header: this month's row counts it,
+  // and so does the year total.
   await page.getByRole("button", { name: "Ledgers" }).click();
-  await page.getByRole("link", { name: "YEAR", exact: true }).click();
+  await page.getByRole("link", { name: "MONTH", exact: true }).click();
+  await visible(page.getByRole("link", { name: "YEAR VIEW →" })).click();
   await expect(page.getByRole("heading", { name: /Yearly\s+ledger/ })).toBeVisible();
   const monthRow = visible(page.locator("tr[aria-current=date]"));
   expect(await minutes(await monthRow.locator("td").last().textContent())).toBeGreaterThanOrEqual(dayTotal);

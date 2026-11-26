@@ -1,10 +1,10 @@
 import { expect, test, type Locator } from "@playwright/test";
 
-/** Bottom bar: HOME · ledger pop-up (DAY / MONTH / YEAR) · PROFILE. */
+/** Bottom bar: HOME · ledger pop-up (DAY / WEEK / MONTH) · PROFILE. */
 
 const visible = (l: Locator) => l.filter({ visible: true });
 
-test("the ledger button pops up Day, Month and Year", async ({ page }) => {
+test("the ledger button pops up Day, Week and Month", async ({ page }) => {
   await page.goto("/");
   const bar = page.getByRole("navigation", { name: "Main" });
   const button = bar.getByRole("button", { name: "Ledgers" });
@@ -15,10 +15,10 @@ test("the ledger button pops up Day, Month and Year", async ({ page }) => {
   // Opens with focus on the first option; arrow keys move along; Escape closes.
   await button.click();
   await expect(button).toHaveAttribute("aria-expanded", "true");
-  await expect(popup.getByRole("link")).toHaveText([/DAY/, /MONTH/, /YEAR/]);
+  await expect(popup.getByRole("link")).toHaveText([/DAY/, /WEEK/, /MONTH/]);
   await expect(popup.getByRole("link", { name: "DAY" })).toBeFocused();
   await page.keyboard.press("ArrowRight");
-  await expect(popup.getByRole("link", { name: "MONTH" })).toBeFocused();
+  await expect(popup.getByRole("link", { name: "WEEK" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(popup).toBeHidden();
   await expect(button).toBeFocused();
@@ -35,20 +35,25 @@ test("the ledger button pops up Day, Month and Year", async ({ page }) => {
 
   // Choosing a ledger navigates and closes it; the button shows we're on a ledger.
   await button.click();
-  await popup.getByRole("link", { name: "YEAR" }).click();
-  await expect(page).toHaveURL(/\/year$/);
-  await expect(visible(page.getByRole("heading", { name: /Yearly\s+ledger/ }))).toBeVisible();
+  await popup.getByRole("link", { name: "WEEK" }).click();
+  await expect(page).toHaveURL(/\/week$/);
+  await expect(visible(page.getByRole("heading", { name: /Weekly\s+statement/ }))).toBeVisible();
   await expect(popup).toBeHidden();
   await button.click();
-  await expect(popup.getByRole("link", { name: "YEAR" })).toHaveAttribute("aria-current", "page");
-  await expect(popup.getByRole("link", { name: "YEAR" })).toBeFocused();
+  await expect(popup.getByRole("link", { name: "WEEK" })).toHaveAttribute("aria-current", "page");
+  await expect(popup.getByRole("link", { name: "WEEK" })).toBeFocused();
+  await popup.getByRole("link", { name: "MONTH" }).click();
+  await expect(visible(page.getByRole("heading", { name: /Monthly\s+ledger/ }))).toBeVisible();
+
+  // Year is no longer in the bar, but the Month ledger links to it; the
+  // ledger button stays lit there.
+  await expect(bar.getByRole("link", { name: "YEAR" })).toHaveCount(0);
+  await visible(page.getByRole("link", { name: "YEAR VIEW →" })).click();
+  await expect(visible(page.getByRole("heading", { name: /Yearly\s+ledger/ }))).toBeVisible();
+  await expect(button).toHaveClass(/bg-yellow/);
+  await button.click();
   await popup.getByRole("link", { name: "DAY" }).click();
   await expect(visible(page.getByRole("heading", { name: /Today's\s+receipt/ }))).toBeVisible();
-
-  // Week is no longer in the bar, but the Day receipt links to it.
-  await expect(bar.getByRole("link", { name: "WEEK" })).toHaveCount(0);
-  await visible(page.getByRole("link", { name: "THIS WEEK'S STATEMENT →" })).click();
-  await expect(visible(page.getByRole("heading", { name: /Weekly\s+statement/ }))).toBeVisible();
 
   // Home on the left, profile on the right.
   await bar.getByRole("link", { name: "PROFILE" }).click();
