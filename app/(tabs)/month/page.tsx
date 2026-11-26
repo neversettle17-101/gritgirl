@@ -68,7 +68,14 @@ async function MonthLedger({ searchParams }: { searchParams: PageProps<"/month">
     <LedgerPage>
       <LedgerHeader
         left={formatMonthYear(range.start)}
-        right="LEDGER"
+        right={
+          <Link
+            href={`/year?date=${range.start}`}
+            className="-my-3.5 inline-flex h-11 items-center font-extrabold text-white underline decoration-2 underline-offset-4 hover:text-yellow focus-visible:ring-2 focus-visible:ring-yellow"
+          >
+            YEAR VIEW →
+          </Link>
+        }
         title={
           <>
             Monthly
@@ -124,9 +131,6 @@ async function MonthLedger({ searchParams }: { searchParams: PageProps<"/month">
       <nav aria-label="Other ledgers" className="mt-4 flex justify-between">
         <Link href={`/week?date=${weekDate}`} className={footLink}>
           WEEK BY WEEK →
-        </Link>
-        <Link href={`/year?date=${range.start}`} className={footLink}>
-          {range.start.slice(0, 4)} LEDGER →
         </Link>
       </nav>
     </LedgerPage>
