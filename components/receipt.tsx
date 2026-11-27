@@ -80,7 +80,13 @@ export function Receipt({ activity, day, units, fresh }: Props) {
                     );
                     return (
                       <li key={ex.id} className="flex justify-between gap-2 text-[11px]">
-                        <span className="truncate uppercase">{ex.exercise.name}</span>
+                        <Link
+                          href={`/progress/${ex.exercise.id}`}
+                          aria-label={`Progress for ${ex.exercise.name}`}
+                          className="truncate uppercase underline decoration-dotted underline-offset-2 hover:text-blue"
+                        >
+                          {ex.exercise.name}
+                        </Link>
                         <span className="shrink-0">
                           {s.line} · {s.weight === "BW" ? "BW" : `${s.weight} ${units.weight.toUpperCase()}`}
                         </span>

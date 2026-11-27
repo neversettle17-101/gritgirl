@@ -4,6 +4,9 @@ import { lastSetsFor } from "@/lib/activities/repo";
 import type { LastSets } from "@/lib/domain/activity-types";
 import type { TemplateDetail } from "@/lib/domain/template-types";
 import { uuidParam } from "@/lib/validation/activities";
+import { buildExerciseProgress, progressHint } from "@/lib/domain/progress";
+import type { UserPrefs } from "@/lib/activities/repo";
+import { getExerciseHistory } from "@/lib/progress/repo";
 import { getTemplate } from "./repo";
 
 /**
@@ -33,4 +36,29 @@ export async function lastSetsForTemplate(
   const ids = [...new Set(t.exercises.map((e) => e.exercise.id))];
   const results = await Promise.all(ids.map((id) => lastSetsFor(supabase, id)));
   return Object.fromEntries(ids.map((id, i) => [id, results[i]!.data ?? null]));
+}
+
+/**
+ * The slip's tiny "vs last week" line for each exercise of a strength
+ * regular ("TOP SET 42.5 KG × 8 · +2.5 KG VS PREV WEEK"). Exercises never
+ * logged get no hint.
+ */
+export async function progressHintsForTemplate(
+  supabase: SupabaseClient,
+  t: TemplateDetail,
+  prefs: Pick<UserPrefs, "units" | "weekStartsOn" | "timezone">,
+): Promise<Record<string, string>> {
+  const ids = [...new Set(t.exercises.map((e) => e.exercise.id))];
+  const results = await Promise.all(ids.map((id) => getExerciseHistory(supabase, id)));
+  const hints: Record<string, string> = {};
+  ids.forEach((id, i) => {
+    const h = results[i]!.data;
+    if (!h) return;
+    const hint = progressHint(
+      buildExerciseProgress(h, { weekStartsOn: prefs.weekStartsOn, timezone: prefs.timezone }),
+      prefs.units.weight,
+    );
+    if (hint) hints[id] = hint;
+  });
+  return hints;
 }
