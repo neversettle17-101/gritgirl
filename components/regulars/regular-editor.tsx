@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, type FormEvent } from "react";
 import { ExercisePicker } from "@/components/strength/exercise-picker";
@@ -292,6 +293,15 @@ export function RegularEditor({ mode, units, template }: Props) {
                       </p>
                     ) : null}
                     <div className="mt-1.5 flex justify-end gap-1 text-[11px] font-extrabold">
+                      {mode === "edit" ? (
+                        <Link
+                          href={`/progress/${ex.exerciseId}`}
+                          aria-label={`Progress for ${ex.name}`}
+                          className="mr-auto flex h-8 items-center underline underline-offset-2 hover:text-blue"
+                        >
+                          PROGRESS →
+                        </Link>
+                      ) : null}
                       <button
                         type="button"
                         aria-label={`Move ${ex.name} up`}

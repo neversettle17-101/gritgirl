@@ -107,6 +107,12 @@ export default function RegularsPage() {
       <Link href="/regulars/new" className={newRegularClass}>
         + NEW REGULAR
       </Link>
+      <Link
+        href="/progress?from=regulars"
+        className="mt-3 py-2 text-center text-xs font-extrabold tracking-[0.04em] text-white underline underline-offset-4 hover:text-yellow"
+      >
+        SEE YOUR PROGRESS BY EXERCISE →
+      </Link>
     </main>
   );
 }

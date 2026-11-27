@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { TornEdge } from "@/components/ledger/ledger-shell";
 import { BodyWeightCard } from "@/components/profile/body-weight-card";
@@ -53,6 +54,14 @@ async function ProfileBody() {
         </dl>
         <TornEdge />
       </div>
+
+      <Link
+        href="/progress?from=profile"
+        className="mt-5 flex h-[54px] items-center justify-between bg-ink px-4 text-sm font-extrabold tracking-[0.04em] text-white hover:bg-blue"
+      >
+        <span>YOUR PROGRESS, WEEK BY WEEK</span>
+        <span aria-hidden="true">→</span>
+      </Link>
 
       <div className="mt-5 flex flex-col gap-5">
         <ProfileEditor profile={p} today={prefs.today} />

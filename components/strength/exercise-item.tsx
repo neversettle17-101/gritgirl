@@ -12,6 +12,8 @@ interface Props {
   count: number;
   exercise: DraftExercise;
   weightUnit: WeightUnit;
+  /** last logged week vs the one before, e.g. "TOP SET 42.5 KG × 8 · +2.5 KG VS PREV WEEK" */
+  hint?: string;
   expanded: boolean;
   showAlt: boolean;
   errors: Record<string, string>;
@@ -74,6 +76,11 @@ export function ExerciseItem(p: Props) {
 
       {p.expanded ? (
         <div id={panelId} className="mb-2.5 bg-[#f4f1ea] p-2">
+          {p.hint ? (
+            <p className="mb-1.5 text-[10px] font-extrabold text-muted" data-testid="progress-hint">
+              LATEST WEEK: {p.hint}
+            </p>
+          ) : null}
           <div
             className="grid items-center gap-1.5 pb-1 text-[10px] font-extrabold text-muted"
             style={{ gridTemplateColumns: `18px repeat(${columns.length + 1}, minmax(0,1fr)) 104px` }}

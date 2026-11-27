@@ -41,6 +41,7 @@ import {
   updateSet,
   type StrengthDraft,
 } from "@/lib/domain/strength-draft";
+import { formatReceiptDate } from "@/lib/domain/dates";
 import { formatClock, type WeightUnit } from "@/lib/domain/units";
 import { uuid } from "@/lib/uuid";
 
@@ -55,6 +56,8 @@ interface Props {
   regular?: TemplateDetail;
   /** the last logged sets of each of the regular's exercises (pre-fill) */
   lasts?: Record<string, LastSets | null>;
+  /** exerciseId → "TOP SET 42.5 KG × 8 · +2.5 KG VS PREV WEEK" (regular ring-ups) */
+  hints?: Record<string, string>;
 }
 
 const noopSubscribe = () => () => {};
@@ -247,7 +250,13 @@ function StrengthSlipInner(props: Props) {
 
       {restored ? (
         <div role="status" className="mt-4 flex items-center justify-between gap-3 bg-yellow px-3 py-2 text-xs font-extrabold text-ink">
-          <span>{mode === "edit" ? "UNSAVED CHANGES RESTORED" : "PICKED UP WHERE YOU LEFT OFF"}</span>
+          <span>
+            {mode === "edit" ? "UNSAVED CHANGES RESTORED" : "PICKED UP WHERE YOU LEFT OFF"}
+            {/* A slip left unsaved last week keeps its old date: say so, so it is not logged in the wrong week. */}
+            {mode === "new" && props.today && draft.date && draft.date !== props.today
+              ? ` · DATED ${formatReceiptDate(draft.date)}`
+              : null}
+          </span>
           <button type="button" onClick={startOver} className="underline underline-offset-2">
             START OVER
           </button>
@@ -324,6 +333,7 @@ function StrengthSlipInner(props: Props) {
               count={draft.exercises.length}
               exercise={ex}
               weightUnit={draft.weightUnit}
+              hint={props.hints?.[ex.exerciseId]}
               expanded={expanded.has(ex.key)}
               showAlt={altShown.has(ex.key)}
               errors={errors}
