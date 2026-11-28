@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { BloodDrop } from "@/components/cycle/marks";
 import { TrendMark } from "@/components/progress/trend-mark";
 import { BackButton } from "@/components/ui";
 import { requirePageSession } from "@/lib/activities/page-data";
+import { loadPeriodMarks } from "@/lib/cycle/repo";
 import { formatReceiptDate } from "@/lib/domain/dates";
 import {
   buildExerciseProgress,
@@ -10,6 +12,7 @@ import {
   formatPrimaryChange,
   KIND_LABELS,
 } from "@/lib/domain/progress";
+import { periodWeeks, sessionRange } from "@/lib/domain/progress-periods";
 import { listExerciseHistories } from "@/lib/progress/repo";
 
 /** Where the back button goes: the screen that linked here (Profile or Regulars), else Home. */
@@ -46,6 +49,14 @@ async function ProgressList() {
   }
   const unit = prefs.units.weight;
   const items = data.map((h) => buildExerciseProgress(h, { weekStartsOn: prefs.weekStartsOn, timezone: prefs.timezone }));
+  // A drop by the trend when the latest week had a session on a period day (decoration: skipped if it fails to load).
+  const range = sessionRange(data.flatMap((h) => h.sessions));
+  const marks = range ? ((await loadPeriodMarks(supabase, range, "progress")).data ?? []) : [];
+  const periodLatest = new Set<string>();
+  data.forEach((h, i) => {
+    const latest = items[i]!.weeks.at(-1);
+    if (latest && periodWeeks(h.sessions, marks, prefs.weekStartsOn).has(latest.weekStart)) periodLatest.add(h.exerciseId);
+  });
 
   if (items.length === 0) {
     return (
@@ -62,11 +73,12 @@ async function ProgressList() {
     <ul aria-label="Exercises" className="mt-4 flex flex-col bg-paper px-3.5 py-1.5 text-ink shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
       {items.map((p) => {
         const last = p.weeks[p.weeks.length - 1]!;
+        const period = periodLatest.has(p.exerciseId);
         return (
           <li key={p.exerciseId} className="border-b border-dotted border-rule last:border-b-0">
             <Link
               href={`/progress/${p.exerciseId}`}
-              aria-label={`Progress for ${p.name}`}
+              aria-label={`Progress for ${p.name}${period ? ", period day in the latest week" : ""}`}
               className="grid grid-cols-[1fr_auto] items-center gap-x-3 py-2.5 hover:text-blue"
             >
               <span className="min-w-0">
@@ -77,6 +89,11 @@ async function ProgressList() {
                 </span>
               </span>
               <span className="text-right text-[11px]" data-testid="trend">
+                {period ? (
+                  <span data-testid="period-week">
+                    <BloodDrop width={8} className="mr-1 inline-block align-[-1px]" />
+                  </span>
+                ) : null}
                 {p.trend && last.change ? (
                   <>
                     <TrendMark trend={p.trend} /> {formatPrimaryChange(last.change.primary, p.kind, unit)}

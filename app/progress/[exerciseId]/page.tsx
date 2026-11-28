@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { BloodDrop } from "@/components/cycle/marks";
 import { ProgressChart } from "@/components/progress/progress-chart";
 import { TrendMark } from "@/components/progress/trend-mark";
 import { BackButton, Dashed } from "@/components/ui";
 import { requirePageSession } from "@/lib/activities/page-data";
+import { loadPeriodMarks } from "@/lib/cycle/repo";
 import { formatReceiptDate } from "@/lib/domain/dates";
 import {
   buildExerciseProgress,
@@ -17,6 +19,7 @@ import {
   weekLabel,
   type ExerciseProgress,
 } from "@/lib/domain/progress";
+import { periodCaption, periodWeeks, sessionRange, type PeriodWeeks } from "@/lib/domain/progress-periods";
 import type { WeightUnit } from "@/lib/domain/units";
 import { getExerciseHistory, getExerciseName } from "@/lib/progress/repo";
 import { uuidParam } from "@/lib/validation/activities";
@@ -80,7 +83,20 @@ function OneWeek() {
   );
 }
 
-function WeekTable({ p, unit }: { p: ExerciseProgress; unit: WeightUnit }) {
+/** Under the chart: the exact period dates that hit sessions, and why those dips are circled (CycProgress). */
+function PeriodNotes({ caption }: { caption: string }) {
+  return (
+    <div className="mt-2 border-t-2 border-dashed border-ink pt-2" data-testid="period-notes">
+      <p className="text-[10px] font-extrabold tracking-[0.04em] text-blood">{caption}</p>
+      <p className="mt-1.5 flex items-start gap-2 text-[11px] leading-[1.45] text-blood-ink">
+        <BloodDrop width={14} className="mt-px" />
+        <span>DIPS INSIDE A RED CIRCLE DON&apos;T COUNT AGAINST YOU. BLOOD BANK WAS CLOSED FOR REPAIRS.</span>
+      </p>
+    </div>
+  );
+}
+
+function WeekTable({ p, unit, periods }: { p: ExerciseProgress; unit: WeightUnit; periods: PeriodWeeks }) {
   const labels = KIND_LABELS[p.kind];
   const rows = [...p.weeks].reverse();
   return (
@@ -103,7 +119,15 @@ function WeekTable({ p, unit }: { p: ExerciseProgress; unit: WeightUnit }) {
           {rows.map((w) => (
             <tr key={w.weekStart} className="border-b border-dotted border-rule align-top" data-testid="week-row">
               <th scope="row" className="py-1.5 pr-1 text-left font-normal">
-                <span className="block font-extrabold">{weekLabel(w.weekStart, w.weekEnd, p.thisWeekStart)}</span>
+                <span className="flex items-center gap-1 font-extrabold">
+                  {weekLabel(w.weekStart, w.weekEnd, p.thisWeekStart)}
+                  {periods.has(w.weekStart) ? (
+                    <>
+                      <BloodDrop width={8} />
+                      <span className="sr-only">(period day)</span>
+                    </>
+                  ) : null}
+                </span>
                 <span className="block text-[10px] text-muted">
                   {plural(w.sessions, "SESSION")} · {plural(w.sets, "SET")}
                   {w.reps ? ` · ${plural(w.reps, "REP")}` : ""}
@@ -166,6 +190,11 @@ async function ProgressBody({ params }: { params: PageProps<"/progress/[exercise
   }
 
   const p = buildExerciseProgress(history, { weekStartsOn: prefs.weekStartsOn, timezone: prefs.timezone });
+  // Period days are decoration here: if they don't load, the chart still does, just uncircled.
+  const range = sessionRange(history.sessions);
+  const marks = range ? await loadPeriodMarks(supabase, range, "progress") : null;
+  const periods = periodWeeks(history.sessions, marks?.data ?? [], prefs.weekStartsOn);
+  const caption = periodCaption(periods);
   const labels = KIND_LABELS[p.kind];
   const unitLabel = unit.toUpperCase();
   const primaryTitle =
@@ -187,14 +216,15 @@ async function ProgressBody({ params }: { params: PageProps<"/progress/[exercise
       ) : (
         <div className="mt-4 bg-paper px-3 pt-3 pb-2 text-ink shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
           <ProgressChart
-            points={p.weeks.map((w) => chartPoint(w, p.kind, unit))}
+            points={p.weeks.map((w) => ({ ...chartPoint(w, p.kind, unit), period: periods.has(w.weekStart) }))}
             primaryTitle={primaryTitle}
             secondaryTitle={secondaryTitle}
-            summary={`${history.name}: ${labels.primary.toLowerCase()} ${formatPrimary(last, p.kind, unit)} in the latest week, over ${p.weeks.length} logged weeks`}
+            summary={`${history.name}: ${labels.primary.toLowerCase()} ${formatPrimary(last, p.kind, unit)} in the latest week, over ${p.weeks.length} logged weeks${caption ? `. Weeks with a session on a period day are circled.` : ""}`}
           />
+          {caption ? <PeriodNotes caption={caption} /> : null}
         </div>
       )}
-      <WeekTable p={p} unit={unit} />
+      <WeekTable p={p} unit={unit} periods={periods} />
     </>
   );
 }
