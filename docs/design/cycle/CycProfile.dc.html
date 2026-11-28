@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile – cycle desk</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#1B1B1B}a:hover{color:#2B59C3}
+</style>
+</helmet>
+<div style="width: 390px; height: 920px; box-sizing: border-box; position: relative; overflow: hidden; background: #2B59C3; font-family: 'JetBrains Mono', monospace; color: #1B1B1B; padding: 52px 20px 0">
+
+<div style="display: flex; justify-content: space-between; align-items: center; color: #fff; font-size: 12px; font-weight: 600; letter-spacing: 0.06em">
+<a href="RcptHome.dc.html" aria-label="Back to home" style="width: 44px; height: 44px; border-radius: 50%; background: #FFFDF8; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="#1B1B1B" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+<span>PROFILE</span>
+</div>
+<h1 style="margin: 10px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 40px; line-height: 0.95; letter-spacing: -0.02em; color: #fff">Member<br>account</h1>
+
+<div style="margin-top: 16px; background: #FFFDF8; padding: 12px 14px; display: flex; align-items: center; gap: 12px; font-size: 12px; transform: rotate(-1deg)">
+<span style="width: 44px; height: 44px; background: #1B1B1B; color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 20px">[A]</span>
+<span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 800; font-size: 14px">[YOUR NAME]</span><span style="color: #555">MEMBER #028 · SINCE NOV</span></span>
+<span style="font-weight: 800">27 ORDERS</span>
+</div>
+
+<div style="margin-top: 16px; transform: rotate(0.6deg)">
+<div style="background: #FFFDF8; padding: 16px 14px 14px; font-size: 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.25)">
+<div style="display: flex; align-items: center; gap: 10px">
+<svg width="34" height="40" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 1C9 7 4 11 4 17a8 8 0 0 0 16 0c0-6-5-10-8-16z" fill="#C8102E"/><circle cx="9.5" cy="17" r="1.4" fill="#fff"/><circle cx="14.5" cy="17" r="1.4" fill="#fff"/><path d="M10 21q2 1.6 4 0" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>
+<div><div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; line-height: 1">Cycle desk</div><div style="color: #555; font-size: 11px">log the blood bank's opening days</div></div>
+</div>
+<div style="border-top: 2px dashed #1B1B1B; margin: 12px 0 8px"></div>
+
+<div style="font-weight: 800; color: #555">TAP YOUR PERIOD DAYS · NOV</div>
+<div style="margin-top: 8px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{strip}}" as="d" hint-placeholder-count="7">
+<button type="button" onClick="{{d.toggle}}" aria-pressed="{{d.pressed}}" aria-label="{{d.aria}}" style="position: relative; height: 62px; border: 2px solid #1B1B1B; background: #fff; padding: 4px 0 0; font-family: inherit; color: #1B1B1B; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px">
+<span style="font-size: 10px; color: #555">{{d.dow}}</span>
+<span style="font-weight: 800; font-size: 14px">{{d.n}}</span>
+<sc-if value="{{d.on}}" hint-placeholder-val="{{ false }}">
+<svg width="14" height="17" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 1C9 7 4 11 4 17a8 8 0 0 0 16 0c0-6-5-10-8-16z" fill="#C8102E"/></svg>
+<svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); overflow: visible"><path d="M14 52 C10 20 40 6 62 8 C88 12 98 34 92 64 C86 92 52 98 28 90 C8 82 4 56 22 30" fill="none" stroke="#C8102E" stroke-width="2.6" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>
+</sc-if>
+</button>
+</sc-for>
+</div>
+<div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px"><span>‹ EARLIER WEEK</span><span>{{count}} DAYS MARKED</span></div>
+
+<div style="border-top: 2px dashed #1B1B1B; margin: 12px 0 8px"></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 4px"><label for="d1" style="font-weight: 800; color: #555">DAY 1</label><input id="d1" type="text" value="{{day1}}" style="height: 42px; border: 2px solid #C8102E; background: #fff; padding: 0 10px; font-family: inherit; font-size: 14px; font-weight: 800; box-sizing: border-box; width: 100%; color: #1B1B1B"></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><label for="d2" style="font-weight: 800; color: #555">DAY 2</label><input id="d2" type="text" value="{{day2}}" style="height: 42px; border: 2px solid #C8102E; background: #fff; padding: 0 10px; font-family: inherit; font-size: 14px; font-weight: 800; box-sizing: border-box; width: 100%; color: #1B1B1B"></div>
+</div>
+
+<div style="border-top: 2px dashed #1B1B1B; margin: 12px 0 6px"></div>
+<sc-for list="{{opts}}" as="o" hint-placeholder-count="3">
+<button type="button" onClick="{{o.toggle}}" aria-pressed="{{o.pressed}}" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 32px; border: none; background: transparent; padding: 0; font-family: inherit; font-size: 12px; font-weight: 800; color: #1B1B1B; cursor: pointer; text-align: left">
+<span style="width: 16px; height: 16px; flex: none; border: 2px solid #1B1B1B; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1">{{o.mark}}</span>{{o.label}}
+</button>
+</sc-for>
+<div style="margin-top: 8px; background: #FCE8EB; color: #8A0C22; padding: 8px 10px; font-size: 11px; line-height: 1.5">ONLY YOU SEE THIS. THE BLOOD BANK IS PRIVATE.</div>
+</div>
+<svg width="350" height="12" viewBox="0 0 350 12" preserveAspectRatio="none" aria-hidden="true" style="display: block"><path d="M0 0 H350 L340 12 L330 0 L320 12 L310 0 L300 12 L290 0 L280 12 L270 0 L260 12 L250 0 L240 12 L230 0 L220 12 L210 0 L200 12 L190 0 L180 12 L170 0 L160 12 L150 0 L140 12 L130 0 L120 12 L110 0 L100 12 L90 0 L80 12 L70 0 L60 12 L50 0 L40 12 L30 0 L20 12 L10 0 L0 12 Z" fill="#FFFDF8"/></svg>
+</div>
+
+<button type="button" style="position: absolute; left: 20px; right: 20px; bottom: 30px; height: 58px; border-radius: 14px; border: none; background: #C8102E; color: #fff; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 800; font-size: 15px; letter-spacing: 0.04em; cursor: pointer">STAMP IT</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":920}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { days: { 24: true, 25: true }, opts: [true, true, true] }; }
+renderVals() {
+var self = this;
+var dows = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+var on = Object.keys(this.state.days).filter(function (k) { return self.state.days[k]; }).map(Number).sort(function (a, b) { return a - b; });
+var strip = [];
+for (var i = 0; i < 7; i++) {
+(function (n, dow) {
+var o = !!self.state.days[n];
+strip.push({ n: n, dow: dow, on: o, pressed: o ? 'true' : 'false', aria: dow + ' ' + n + ' November' + (o ? ', period day' : ''), toggle: function () { var d = Object.assign({}, self.state.days); d[n] = !d[n]; self.setState({ days: d }); } });
+})(23 + i, dows[i]);
+}
+var labels = ['CIRCLE IT ON MY LEDGERS', 'CIRCLE IT ON PROGRESS CHARTS', 'REMIND ME ~28 DAYS LATER'];
+return {
+strip: strip, count: on.length,
+day1: on[0] ? on[0] + ' NOV' : '—', day2: on[1] ? on[1] + ' NOV' : '—',
+opts: labels.map(function (l, i) { var v = self.state.opts[i]; return { label: l, mark: v ? 'X' : '', pressed: v ? 'true' : 'false', toggle: function () { var o = self.state.opts.slice(); o[i] = !o[i]; self.setState({ opts: o }); } }; })
+};
+}
+}
+</script>
+</body>
+</html>

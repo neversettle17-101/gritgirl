@@ -201,6 +201,10 @@ export const userSettings = pgTable("user_settings", {
   defaultCycleLen: smallint("default_cycle_len").notNull().default(28),
   defaultPeriodLen: smallint("default_period_len").notNull().default(5),
   cyclePredictionsOn: boolean("cycle_predictions_on").notNull().default(true),
+  /** Cycle desk: circle period days on the Week / Month ledgers. */
+  cycleCircleLedgers: boolean("cycle_circle_ledgers").notNull().default(true),
+  /** Cycle desk: circle period days on the per-exercise progress charts. */
+  cycleCircleProgress: boolean("cycle_circle_progress").notNull().default(true),
   /** profile: all optional */
   displayName: text("display_name"),
   heightCm: numeric("height_cm", { precision: 4, scale: 1, mode: "number" }),
