@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Month ledger – with cycle</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#fff}a:hover{color:#FFE27A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #2B59C3; font-family: 'JetBrains Mono', monospace; color: #1B1B1B; padding: 52px 20px 0">
+
+<div style="display: flex; justify-content: space-between; align-items: center; color: #fff; font-size: 12px; font-weight: 600; letter-spacing: 0.06em">
+<span>NOV 2026</span><span>LEDGER</span>
+</div>
+<h1 style="margin: 10px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 44px; line-height: 0.95; letter-spacing: -0.02em; color: #fff">Monthly<br>ledger</h1>
+
+<div style="position: relative; margin-top: 18px; transform: rotate(-0.6deg)">
+<div style="background: #FFFDF8; padding: 14px 14px 12px; font-size: 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.25)">
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; font-size: 11px; font-weight: 800; text-align: center; padding-bottom: 6px; border-bottom: 2px dashed #1B1B1B; margin-bottom: 6px">
+<span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px">
+<sc-for list="{{cells}}" as="c" hint-placeholder-count="35">
+<sc-if value="{{c.blank}}" hint-placeholder-val="{{ false }}"><span style="height: 44px"></span></sc-if>
+<sc-if value="{{c.day}}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{c.pick}}" aria-label="{{c.aria}}" style="position: relative; height: 44px; padding: 3px 0 0; border: none; background: transparent; font-family: inherit; font-size: 11px; color: #1B1B1B; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px">
+<sc-if value="{{c.sel}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; inset: 0; background: #FFE27A"></span></sc-if>
+<sc-if value="{{c.today}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; inset: 0; border: 2px solid #1B1B1B"></span></sc-if>
+<sc-if value="{{c.period}}" hint-placeholder-val="{{ false }}">
+<span style="position: absolute; inset: 0; background: #FCE8EB"></span>
+<svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; left: -4px; top: -4px; width: calc(100% + 8px); height: calc(100% + 8px); overflow: visible"><path d="M14 52 C10 20 40 6 62 8 C88 12 98 34 92 64 C86 92 52 98 28 90 C8 82 4 56 22 30" fill="none" stroke="#C8102E" stroke-width="2.4" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>
+</sc-if>
+<span style="position: relative; font-weight: 600">{{c.n}}</span>
+<span style="position: relative; display: flex; gap: 1px; align-items: center">
+<sc-if value="{{c.r}}" hint-placeholder-val="{{ false }}"><span style="width: 12px; height: 12px; background: #1B1B1B; color: #fff; font-size: 9px; font-weight: 800; line-height: 12px; text-align: center">R</span></sc-if>
+<sc-if value="{{c.l}}" hint-placeholder-val="{{ false }}"><span style="width: 12px; height: 12px; background: #E0412B; color: #fff; font-size: 9px; font-weight: 800; line-height: 12px; text-align: center">S</span></sc-if>
+<sc-if value="{{c.w}}" hint-placeholder-val="{{ false }}"><span style="width: 10px; height: 10px; border: 1px solid #1B1B1B; font-size: 9px; font-weight: 800; line-height: 10px; text-align: center">W</span></sc-if>
+<sc-if value="{{c.period}}" hint-placeholder-val="{{ false }}"><svg width="9" height="11" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 1C9 7 4 11 4 17a8 8 0 0 0 16 0c0-6-5-10-8-16z" fill="#C8102E"/></svg></sc-if>
+</span>
+</button>
+</sc-if>
+</sc-for>
+</div>
+<div style="border-top: 2px dashed #1B1B1B; margin: 8px 0 6px"></div>
+<div style="font-weight: 800; font-size: 12px; min-height: 16px; color: {{capColor}}">{{caption}}</div>
+</div>
+<svg width="350" height="10" viewBox="0 0 350 10" preserveAspectRatio="none" aria-hidden="true" style="display: block"><path d="M0 0 H350 L340 10 L330 0 L320 10 L310 0 L300 10 L290 0 L280 10 L270 0 L260 10 L250 0 L240 10 L230 0 L220 10 L210 0 L200 10 L190 0 L180 10 L170 0 L160 10 L150 0 L140 10 L130 0 L120 10 L110 0 L100 10 L90 0 L80 10 L70 0 L60 10 L50 0 L40 10 L30 0 L20 10 L10 0 L0 10 Z" fill="#FFFDF8"/></svg>
+</div>
+
+<div style="margin-top: 14px; background: #FFFDF8; padding: 12px 14px; font-size: 12px; line-height: 1.7; transform: rotate(0.6deg); box-shadow: 0 10px 24px rgba(0,0,0,0.2)">
+<div style="display: flex; justify-content: space-between"><span>RUNS ×{{runs}}</span><span>STRENGTH ×{{lifts}}</span><span>WALKS ×{{walks}}</span></div>
+<div style="display: flex; justify-content: space-between"><span>LONGEST STREAK</span><span>{{streak}} DAYS</span></div>
+<div style="display: flex; justify-content: space-between; color: #C8102E; font-weight: 800"><span>BLOOD BANK DOWN</span><span>24 – 25 NOV</span></div>
+<div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 16px"><span>MONTH TOTAL</span><span>{{total}} WORKOUTS</span></div>
+</div>
+
+<nav aria-label="Main" style="position: absolute; left: 20px; right: 20px; bottom: 30px; display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; letter-spacing: 0.08em">
+<a href="RcptHome.dc.html" style="text-decoration: none; padding: 12px 8px">HOME</a>
+<a href="RcptDay.dc.html" style="text-decoration: none; padding: 12px 8px">DAY</a>
+<a href="CycWeek.dc.html" style="text-decoration: none; padding: 12px 8px">WEEK</a>
+<a href="CycMonth.dc.html" aria-current="page" style="text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 3px; padding: 12px 8px">MONTH</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { sel: 24 }; }
+renderVals() {
+var self = this;
+var log = { 2:'r',3:'l',4:'w',5:'r',6:'l',7:'rw',9:'r',10:'l',12:'r',13:'lw',14:'r',16:'l',17:'r',18:'w',19:'l',20:'r',21:'rl',23:'r',24:'lw',26:'r',27:'l',28:'rl' };
+var period = { 24: 'DAY 1', 25: 'DAY 2' };
+var names = { r: 'RUN', l: 'STRENGTH', w: 'WALK' };
+var dows = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+var cells = [], runs = 0, lifts = 0, walks = 0, best = 0, cur = 0;
+for (var i = 0; i < 6; i++) cells.push({ blank: true, day: false });
+for (var d = 1; d <= 30; d++) {
+var s = log[d] || '';
+runs += s.split('r').length - 1; lifts += s.split('l').length - 1; walks += s.split('w').length - 1;
+if (d <= 28) { cur = s ? cur + 1 : 0; if (cur > best) best = cur; }
+(function (day, code) {
+var label = code ? code.split('').map(function (k) { return names[k]; }).join(' + ') : (day > 28 ? 'NOT YET RUNG UP' : 'REST DAY · NO CHARGE');
+var p = period[day];
+cells.push({ blank: false, day: true, n: day, r: code.indexOf('r') > -1, l: code.indexOf('l') > -1, w: code.indexOf('w') > -1, period: !!p, pday: p, today: day === 28, sel: day === self.state.sel && day !== 28 && !p, label: label, aria: day + ' November: ' + label + (p ? ', period ' + p.toLowerCase() : ''), pick: function () { self.setState({ sel: day }); } });
+})(d, s);
+}
+var picked = cells.filter(function (c) { return c.day && c.n === self.state.sel; })[0];
+var caption = dows[(picked.n + 5) % 7] + ' ' + picked.n + ' · ' + (picked.period ? 'BLOOD BANK DOWN (' + picked.pday + ') · ' : '') + picked.label + (picked.n === 28 ? ' · TODAY' : '');
+return { cells: cells, runs: runs, lifts: lifts, walks: walks, total: runs + lifts + walks, streak: best, caption: caption, capColor: picked.period ? '#C8102E' : '#1B1B1B' };
+}
+}
+</script>
+</body>
+</html>

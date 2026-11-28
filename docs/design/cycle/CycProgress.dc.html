@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Progress – price history per exercise</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#fff}a:hover{color:#FFE27A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #2B59C3; font-family: 'JetBrains Mono', monospace; color: #1B1B1B; padding: 52px 20px 0">
+
+<div style="display: flex; justify-content: space-between; align-items: center; color: #fff; font-size: 12px; font-weight: 600; letter-spacing: 0.06em">
+<span>26 OCT – 28 NOV</span><span>PROGRESS</span>
+</div>
+<h1 style="margin: 10px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 40px; line-height: 0.95; letter-spacing: -0.02em; color: #fff">Price<br>history</h1>
+
+<div style="margin-top: 14px; display: flex; gap: 6px">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="3">
+<sc-if value="{{c.on}}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{c.pick}}" aria-pressed="true" style="height: 40px; padding: 0 12px; border: 2px solid #FFFDF8; background: #FFFDF8; color: #1B1B1B; font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer">{{c.label}}</button></sc-if>
+<sc-if value="{{c.off}}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{c.pick}}" aria-pressed="false" style="height: 40px; padding: 0 12px; border: 2px solid #FFFDF8; background: transparent; color: #fff; font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer">{{c.label}}</button></sc-if>
+</sc-for>
+</div>
+
+<div style="margin-top: 14px; transform: rotate(-0.5deg)">
+<div style="background: #FFFDF8; padding: 14px 16px; box-shadow: 0 12px 30px rgba(0,0,0,0.25); font-size: 12px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px">{{title}}</span>
+<span style="font-weight: 800">{{unit}}</span>
+</div>
+<div style="color: #555; font-size: 11px">{{sub}}</div>
+
+<div role="img" aria-label="{{aria}}" style="position: relative; width: 318px; height: 210px; margin-top: 10px; background-image: repeating-linear-gradient(0deg, #E6E1D8 0 1px, transparent 1px 42px)">
+<svg width="318" height="210" viewBox="0 0 318 210" aria-hidden="true" style="position: absolute; inset: 0"><polyline points="{{pts}}" fill="none" stroke="#1B1B1B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg>
+<sc-for list="{{dots}}" as="p" hint-placeholder-count="10">
+<span style="position: absolute; left: {{p.l}}; top: {{p.t}}; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; background: {{p.fill}}; border: 2px solid #1B1B1B; box-sizing: border-box"></span>
+</sc-for>
+<sc-for list="{{periods}}" as="p" hint-placeholder-count="2">
+<svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; left: {{p.cl}}; top: {{p.ct}}; width: 40px; height: 40px; overflow: visible"><path d="M14 52 C10 20 40 6 62 8 C88 12 98 34 92 64 C86 92 52 98 28 90 C8 82 4 56 22 30" fill="none" stroke="#C8102E" stroke-width="2.6" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>
+<span style="position: absolute; left: {{p.ll}}; top: {{p.lt}}; transform: rotate(-6deg); background: #C8102E; color: #fff; font-size: 9px; font-weight: 800; letter-spacing: 0.04em; padding: 3px 5px; white-space: nowrap">BLOOD BANK DOWN</span>
+</sc-for>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 10px; color: #555; margin-top: 4px"><span>{{first}}</span><span>{{mid}}</span><span>{{last}}</span></div>
+
+<div style="border-top: 2px dashed #1B1B1B; margin: 12px 0 8px"></div>
+<div style="display: flex; justify-content: space-between"><span>STARTED AT</span><span>{{start}}</span></div>
+<div style="display: flex; justify-content: space-between"><span>BEST SO FAR</span><span>{{best}}</span></div>
+<div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 15px; margin-top: 4px"><span>NET GAIN</span><span>{{gain}}</span></div>
+<div style="margin-top: 10px; display: flex; gap: 8px; align-items: flex-start; color: #8A0C22; font-size: 11px; line-height: 1.45">
+<svg width="14" height="17" viewBox="0 0 24 28" aria-hidden="true" style="flex: none"><path d="M12 1C9 7 4 11 4 17a8 8 0 0 0 16 0c0-6-5-10-8-16z" fill="#C8102E"/></svg>
+<span>DIPS INSIDE A RED CIRCLE DON'T COUNT AGAINST YOU. BLOOD BANK WAS CLOSED FOR REPAIRS.</span>
+</div>
+</div>
+</div>
+
+<nav aria-label="Main" style="position: absolute; left: 20px; right: 20px; bottom: 30px; display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; letter-spacing: 0.08em">
+<a href="RcptHome.dc.html" style="text-decoration: none; padding: 12px 8px">HOME</a>
+<a href="RcptDay.dc.html" style="text-decoration: none; padding: 12px 8px">DAY</a>
+<a href="CycWeek.dc.html" style="text-decoration: none; padding: 12px 8px">WEEK</a>
+<a href="CycMonth.dc.html" style="text-decoration: none; padding: 12px 8px">MONTH</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { ex: 0 }; }
+renderVals() {
+var self = this;
+var sets = [
+{ label: 'BENCH PRESS', title: 'Bench press', unit: 'TOP SET · KG', sub: 'heaviest set, every strength workout', fmt: function (v) { return v + ' KG'; },
+data: [['23 OCT',32.5],['27 OCT',30,1],['31 OCT',32.5],['3 NOV',32.5],['6 NOV',35],['10 NOV',35],['13 NOV',37.5],['17 NOV',37.5],['21 NOV',40],['24 NOV',35,1],['28 NOV',40]] },
+{ label: 'RUN', title: 'Run distance', unit: 'KM', sub: 'every run, in kilometres', fmt: function (v) { return v.toFixed(1) + ' KM'; },
+data: [['26 OCT',4.5],['28 OCT',3,1],['2 NOV',5],['5 NOV',5],['9 NOV',5.2],['12 NOV',5],['14 NOV',6],['17 NOV',5.5],['20 NOV',6.2],['23 NOV',5],['26 NOV',5.4],['28 NOV',5.2]] },
+{ label: 'SQUAT', title: 'Goblet squat', unit: 'TOP SET · KG', sub: 'heaviest set, every leg day', fmt: function (v) { return v + ' KG'; },
+data: [['25 OCT',15],['27 OCT',12,1],['1 NOV',15],['8 NOV',17.5],['15 NOV',20],['22 NOV',20],['24 NOV',17.5,1]] }
+];
+var s = sets[this.state.ex];
+var W = 318, H = 210, px = 16, top = 34, bot = 18;
+var vals = s.data.map(function (d) { return d[1]; });
+var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+var n = s.data.length;
+var pts = [], dots = [], periods = [];
+s.data.forEach(function (d, i) {
+var x = px + i * (W - 2 * px) / (n - 1);
+var y = top + (1 - (d[1] - mn) / ((mx - mn) || 1)) * (H - top - bot);
+pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+dots.push({ l: x + 'px', t: y + 'px', fill: d[2] ? '#C8102E' : '#FFFDF8' });
+if (d[2]) {
+var ll = Math.min(Math.max(x - 46, 0), W - 96);
+periods.push({ cl: (x - 20) + 'px', ct: (y - 20) + 'px', ll: ll + 'px', lt: (y - 40 < 0 ? y + 22 : y - 40) + 'px' });
+}
+});
+var best = Math.max.apply(null, vals);
+var gain = vals[n - 1] - vals[0];
+return {
+chips: sets.map(function (x, i) { return { label: x.label, on: i === self.state.ex, off: i !== self.state.ex, pick: function () { self.setState({ ex: i }); } }; }),
+title: s.title, unit: s.unit, sub: s.sub, pts: pts.join(' '), dots: dots, periods: periods,
+first: s.data[0][0], mid: s.data[Math.floor(n / 2)][0], last: s.data[n - 1][0],
+start: s.fmt(vals[0]), best: s.fmt(best), gain: (gain >= 0 ? '+' : '') + s.fmt(Math.round(gain * 10) / 10),
+aria: s.title + ' over ' + n + ' workouts, from ' + s.fmt(vals[0]) + ' to ' + s.fmt(vals[n - 1]) + '. Period days circled.'
+};
+}
+}
+</script>
+</body>
+</html>

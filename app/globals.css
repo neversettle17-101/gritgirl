@@ -14,6 +14,11 @@
   --color-muted: #555555;
   --color-rule: #999999;
 
+  /* Cycle desk ("blood bank down"): pen-circle red, cell tint, note ink. */
+  --color-blood: #c8102e;
+  --color-blood-tint: #fce8eb;
+  --color-blood-ink: #8a0c22;
+
   /* Activity-type swatches (mockup: R = ink, S = red, W = outlined). */
   --color-run: var(--color-ink);
   --color-strength: var(--color-red);
