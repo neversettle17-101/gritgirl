@@ -35,7 +35,7 @@ export function LedgerCardsView({ numbers }: { numbers: Numbers | null }) {
 
 export async function LedgerCards() {
   const { supabase, prefs } = await requirePageSession();
-  const { data } = await loadBoard(supabase, prefs, "month", prefs.today);
+  const { data } = await loadBoard(supabase, prefs, "month", prefs.today, { periodMarks: false });
   const numbers = data ? homeLedgerNumbers(data, prefs.weekStartsOn) : { day: null, week: null, month: null };
   return <LedgerCardsView numbers={numbers} />;
 }

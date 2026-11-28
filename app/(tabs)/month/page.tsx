@@ -1,18 +1,15 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { LedgerHeader, LedgerPage, LedgerSkeleton, TornEdge, TYPE_ORDER } from "@/components/ledger/ledger-shell";
+import { MonthGrid, type MonthGridCell } from "@/components/ledger/month-grid";
 import { requirePageSession } from "@/lib/activities/page-data";
-import { TYPE_LABEL, type ActivityType } from "@/lib/domain/activity-types";
+import { TYPE_LABEL } from "@/lib/domain/activity-types";
 import { addMonths, type BoardDay } from "@/lib/domain/board";
 import { formatMonthYear, monthLong, weekdayShort } from "@/lib/domain/dates";
+import { formatPeriodSpans, marksByDate, periodSpans } from "@/lib/domain/ledger-periods";
+import { periodDayLabel, type PeriodMark } from "@/lib/domain/period-marks";
 import { loadBoard } from "@/lib/board/load";
 import { pageDate } from "@/lib/validation/board";
-
-const MARKER: Record<ActivityType, { letter: string; className: string }> = {
-  running: { letter: "R", className: "size-3 bg-ink text-white leading-3" },
-  strength: { letter: "S", className: "size-3 bg-red text-white leading-3" },
-  walking: { letter: "W", className: "size-3 border border-ink leading-[10px]" },
-};
 
 const footLink =
   "flex h-11 items-center text-xs font-extrabold tracking-[0.06em] text-white hover:text-yellow focus-visible:ring-2 focus-visible:ring-yellow";
@@ -23,30 +20,22 @@ function dayLabel(d: BoardDay, today: string) {
   return d.date >= today ? "NOT YET RUNG UP" : "REST DAY · NO CHARGE";
 }
 
-function Cell({ d, today }: { d: BoardDay; today: string }) {
-  if (!d.inPeriod) return <span aria-hidden="true" className="h-11" />;
+/** One grid cell's data, with the CycMonth caption and aria-label. */
+function cell(d: BoardDay, today: string, mark: PeriodMark | undefined): MonthGridCell {
   const n = Number(d.date.slice(8));
-  const label = `${n} ${monthLong(d.date)}: ${dayLabel(d, today)}${d.date === today ? " · TODAY" : ""}`;
-  const types = TYPE_ORDER.filter((t) => d.activities.some((a) => a.type === t));
-  return (
-    <Link
-      href={`/day?date=${d.date}`}
-      aria-label={label}
-      aria-current={d.date === today ? "date" : undefined}
-      className={`flex h-11 flex-col items-center gap-[3px] pt-[3px] text-[11px] hover:bg-yellow focus-visible:bg-yellow ${
-        d.date === today ? "border-2 border-ink" : ""
-      }`}
-    >
-      <span className="font-semibold">{n}</span>
-      <span aria-hidden="true" className="flex gap-px">
-        {types.map((t) => (
-          <span key={t} className={`text-center text-[9px] font-extrabold ${MARKER[t].className}`}>
-            {MARKER[t].letter}
-          </span>
-        ))}
-      </span>
-    </Link>
-  );
+  const label = dayLabel(d, today);
+  const isToday = d.date === today;
+  const tail = isToday ? " · TODAY" : "";
+  return {
+    date: d.date,
+    inPeriod: d.inPeriod,
+    n,
+    types: TYPE_ORDER.filter((t) => d.activities.some((a) => a.type === t)),
+    today: isToday,
+    periodDay: mark?.day ?? null,
+    ariaLabel: `${n} ${monthLong(d.date)}: ${label}${mark ? `, period day ${mark.day}` : ""}${tail}`,
+    caption: `${weekdayShort(d.date)} ${n} · ${mark ? `BLOOD BANK DOWN (${periodDayLabel(mark)}) · ` : ""}${label}${tail}`,
+  };
 }
 
 async function MonthLedger({ searchParams }: { searchParams: PageProps<"/month">["searchParams"] }) {
@@ -63,6 +52,9 @@ async function MonthLedger({ searchParams }: { searchParams: PageProps<"/month">
   const header = days.slice(0, 7).map((d) => weekdayShort(d.date).charAt(0));
   // The weekly statement for this month: this week if today is in it, else its first week.
   const weekDate = prefs.today >= range.start && prefs.today <= range.end ? prefs.today : range.start;
+  const marks = marksByDate(data.periodMarks);
+  const cells = days.map((d) => cell(d, prefs.today, d.inPeriod ? marks.get(d.date) : undefined));
+  const bloodBank = formatPeriodSpans(periodSpans(data.periodMarks, { from: range.start, to: range.end }));
 
   return (
     <LedgerPage>
@@ -97,13 +89,7 @@ async function MonthLedger({ searchParams }: { searchParams: PageProps<"/month">
               <span key={i}>{h}</span>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-[3px]">
-            {days.map((d) => (
-              <Cell key={d.date} d={d} today={prefs.today} />
-            ))}
-          </div>
-          <div className="mt-2 mb-1.5 border-t-2 border-dashed border-ink" />
-          <p className="min-h-4 text-xs font-extrabold">TAP A DAY FOR ITS RECEIPT</p>
+          <MonthGrid cells={cells} />
         </div>
         <TornEdge />
       </div>
@@ -120,6 +106,12 @@ async function MonthLedger({ searchParams }: { searchParams: PageProps<"/month">
             {streaks.longest} {streaks.longest === 1 ? "DAY" : "DAYS"}
           </span>
         </div>
+        {bloodBank ? (
+          <div className="flex justify-between gap-3 font-extrabold text-blood" data-testid="month-blood-bank">
+            <span>BLOOD BANK DOWN</span>
+            <span className="text-right">{bloodBank}</span>
+          </div>
+        ) : null}
         <div className="flex justify-between text-base font-extrabold">
           <span>MONTH TOTAL</span>
           <span data-testid="month-total">
