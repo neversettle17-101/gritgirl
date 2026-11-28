@@ -7,6 +7,8 @@ import type { TemplatePayload } from "@/lib/validation/templates";
 import type { CustomExerciseInput } from "@/lib/validation/exercises";
 import type { BodyWeightEntry, Profile } from "@/lib/domain/profile";
 import type { BodyWeightInput, ProfilePatchInput } from "@/lib/validation/profile";
+import type { CycleMarkPrefs } from "@/lib/cycle/repo";
+import type { CycleMarkPrefsPatch } from "@/lib/validation/cycle";
 
 /** Browser-side calls to our own /api route handlers. */
 
@@ -147,4 +149,25 @@ export async function deleteBodyWeight(id: string): Promise<void> {
     if (e instanceof ApiError && e.status === 404) return;
     throw e;
   }
+}
+
+// ───────── cycle desk ─────────
+
+export async function listPeriodDays(range: { from: string; to: string }): Promise<string[]> {
+  const sp = new URLSearchParams(range);
+  return (await call<{ dates: string[] }>(`/api/period-days?${sp}`)).dates;
+}
+
+/** Idempotent: days already marked stay marked. */
+export async function addPeriodDays(dates: string[]): Promise<string[]> {
+  return (await call<{ dates: string[] }>("/api/period-days", { method: "POST", body: JSON.stringify({ dates }) })).dates;
+}
+
+/** Idempotent: unmarking a day that isn't marked is fine. */
+export async function removePeriodDay(date: string): Promise<void> {
+  await call<void>(`/api/period-days/${date}`, { method: "DELETE" });
+}
+
+export async function updateCycleMarkPrefs(patch: CycleMarkPrefsPatch): Promise<CycleMarkPrefs> {
+  return (await call<{ prefs: CycleMarkPrefs }>("/api/cycle/prefs", { method: "PATCH", body: JSON.stringify(patch) })).prefs;
 }

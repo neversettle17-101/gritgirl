@@ -2,11 +2,17 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { TornEdge } from "@/components/ledger/ledger-shell";
 import { BodyWeightCard } from "@/components/profile/body-weight-card";
+import { CycleDesk } from "@/components/profile/cycle-desk";
 import { ProfileEditor } from "@/components/profile/profile-editor";
 import { SignedInAs } from "@/components/signed-in-as";
 import { requirePageSession } from "@/lib/activities/page-data";
+import { getCycleMarkPrefs, listPeriodDates } from "@/lib/cycle/repo";
+import { addDays } from "@/lib/domain/dates";
 import { ageOn, formatBodyWeight, formatHeight, heightUnitFor } from "@/lib/domain/profile";
 import { getProfile, listBodyWeights } from "@/lib/profile/repo";
+
+/** How far back the Cycle desk starts out knowing your period days (its strip reads further on demand). */
+const CYCLE_DESK_LOOKBACK_DAYS = 120;
 
 function Row({ label, value, testId }: { label: string; value: string; testId?: string }) {
   return (
@@ -21,8 +27,14 @@ function Row({ label, value, testId }: { label: string; value: string; testId?: 
 
 async function ProfileBody() {
   const { supabase, prefs } = await requirePageSession();
-  const [profile, weights] = await Promise.all([getProfile(supabase), listBodyWeights(supabase)]);
-  if (profile.error || weights.error) throw new Error("Could not load your profile");
+  const periodFrom = addDays(prefs.today, -CYCLE_DESK_LOOKBACK_DAYS);
+  const [profile, weights, periodDates, cyclePrefs] = await Promise.all([
+    getProfile(supabase),
+    listBodyWeights(supabase),
+    listPeriodDates(supabase, { from: periodFrom, to: prefs.today }),
+    getCycleMarkPrefs(supabase),
+  ]);
+  if (profile.error || weights.error || periodDates.error || cyclePrefs.error) throw new Error("Could not load your profile");
 
   const p = profile.data;
   const latest = weights.data[0];
@@ -64,6 +76,13 @@ async function ProfileBody() {
       </Link>
 
       <div className="mt-5 flex flex-col gap-5">
+        <CycleDesk
+          initialDates={periodDates.data}
+          loadedFrom={periodFrom}
+          prefs={cyclePrefs.data}
+          today={prefs.today}
+          weekStartsOn={prefs.weekStartsOn}
+        />
         <ProfileEditor profile={p} today={prefs.today} />
         <BodyWeightCard entries={weights.data} unit={p.weightUnit} today={prefs.today} />
       </div>
