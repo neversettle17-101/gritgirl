@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Locator } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 
 /**
  * Ledgers (§8): a run logged today shows up on the Day receipt, the Week
@@ -108,4 +110,88 @@ test("ledger pages step back and forward", async ({ page }) => {
   await page.goto("/day?date=2026-02-14");
   await expect(page.getByRole("heading", { name: /Saturday's\s+receipt/ })).toBeVisible();
   await expect(page.getByText("REST DAY · NO CHARGE")).toBeVisible();
+});
+
+// ---------------------------------------------------------------------------
+// Period days (CycWeek / CycMonth). There is no period-day UI to drive here,
+// so the rows go in with the service-role client for the signed-in user (read
+// from the Supabase auth cookie in the stored state), in a past month no
+// other spec touches.
+
+function signedInUserId(): string {
+  const { cookies } = JSON.parse(readFileSync("tests/e2e/.auth/user.json", "utf8")) as {
+    cookies: { name: string; value: string }[];
+  };
+  // sb-<ref>-auth-token, possibly chunked as .0, .1 …
+  const parts = cookies
+    .filter((c) => /^sb-.+-auth-token(\.\d+)?$/.test(c.name))
+    .sort((a, b) => Number(a.name.split(".")[1] ?? 0) - Number(b.name.split(".")[1] ?? 0))
+    .map((c) => c.value);
+  const raw = decodeURIComponent(parts.join(""));
+  const json = raw.startsWith("base64-") ? Buffer.from(raw.slice(7), "base64url").toString("utf8") : raw;
+  return (JSON.parse(json) as { user: { id: string } }).user.id;
+}
+
+const PERIOD = ["2026-03-24", "2026-03-25"]; // Tue, Wed
+
+test.describe("period days on the ledgers", () => {
+  const admin = () =>
+    createClient(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321", process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  let userId: string;
+
+  test.beforeAll(async () => {
+    test.skip(!process.env.SUPABASE_SERVICE_ROLE_KEY, "needs SUPABASE_SERVICE_ROLE_KEY to insert period days");
+    userId = signedInUserId();
+    const db = admin();
+    const ins = await db.from("period_days").upsert(PERIOD.map((date) => ({ user_id: userId, date })));
+    if (ins.error) throw ins.error;
+    const on = await db.from("user_settings").update({ cycle_circle_ledgers: true }).eq("user_id", userId);
+    if (on.error) throw on.error;
+  });
+
+  test.afterAll(async () => {
+    if (!userId) return;
+    const db = admin();
+    await db.from("period_days").delete().eq("user_id", userId).in("date", PERIOD);
+    await db.from("user_settings").update({ cycle_circle_ledgers: true }).eq("user_id", userId);
+  });
+
+  test("week and month circle them, and the switch turns that off", async ({ page }) => {
+    // Week: both rows get the red note, the legend gains PERIOD, the chart a drop per day.
+    await page.goto("/week?date=2026-03-24");
+    await expect(page.getByText("23 – 29 MAR")).toBeVisible();
+    const tue = visible(page.locator("tr[data-period-day='1']"));
+    await expect(tue).toContainText("TUE");
+    await expect(tue).toContainText("BLOOD BANK DOWN · DAY 1");
+    await expect(visible(page.locator("tr[data-period-day='2']"))).toContainText("BLOOD BANK DOWN · DAY 2");
+    await expect(visible(page.locator("tr[data-period-day]"))).toHaveCount(2);
+    await expect(visible(page.getByText("PERIOD", { exact: true }))).toBeVisible();
+    await expect(visible(page.getByTestId("week-chart")).getByTestId("period-tick")).toHaveCount(2);
+
+    // Month: tinted, circled cells with the period day in their label; the
+    // caption turns red; the summary has the span.
+    await page.goto("/month?date=2026-03-01");
+    await expect(page.getByText("MAR 2026")).toBeVisible();
+    const cell = visible(page.getByRole("link", { name: /^24 March: .*, period day 1$/ }));
+    await expect(cell).toHaveAttribute("data-period-day", "1");
+    await expect(visible(page.getByRole("link", { name: /^25 March: .*, period day 2$/ }))).toBeVisible();
+    await cell.hover();
+    const caption = visible(page.getByTestId("month-caption"));
+    await expect(caption).toHaveText("TUE 24 · BLOOD BANK DOWN (DAY 1) · REST DAY · NO CHARGE");
+    await expect(caption).toHaveClass(/text-blood/);
+    await expect(visible(page.getByTestId("month-blood-bank"))).toHaveText(/BLOOD BANK DOWN\s*24 – 25 MAR/);
+
+    // Switch off: no marks anywhere.
+    const off = await admin().from("user_settings").update({ cycle_circle_ledgers: false }).eq("user_id", userId);
+    if (off.error) throw off.error;
+    await page.goto("/month?date=2026-03-02");
+    await expect(page.getByText("MAR 2026")).toBeVisible();
+    await expect(visible(page.locator("a[data-period-day]"))).toHaveCount(0);
+    await expect(visible(page.getByTestId("month-blood-bank"))).toHaveCount(0);
+    await page.goto("/week?date=2026-03-25");
+    await expect(page.getByText("23 – 29 MAR")).toBeVisible();
+    await expect(visible(page.locator("tr[data-period-day]"))).toHaveCount(0);
+  });
 });

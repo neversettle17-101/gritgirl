@@ -1,23 +1,46 @@
 "use client";
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, type XAxisTickContentProps } from "recharts";
+import { BLOOD } from "@/components/cycle/marks";
 
 /**
  * Stacked bar per day (or per month, on the Year ledger): active minutes split into run / strength / walk
  * (mockup 3 palette: run = ink, strength = red, walk = ink hatching).
  * The numbers are also in the rows below, so the chart is decorative for
  * screen readers apart from its summary label.
+ *
+ * A logged period day (CycWeek) gets a small red drop under its tick.
  */
 export interface WeekChartDay {
   label: string;
   running: number;
   strength: number;
   walking: number;
+  /** A logged period day: draws a small blood drop under the tick. */
+  period?: boolean;
 }
 
 const INK = "#1B1B1B";
 const RED = "#E0412B";
 const WALK_PATTERN = "gg-walk-hatch";
+const TICK_STYLE = { fill: INK, fontSize: 11, fontWeight: 800, fontFamily: "var(--font-mono)" } as const;
+/** BloodDrop's path (24 × 28 box), drawn inside the chart's SVG. */
+const DROP_PATH = "M12 1C9 7 4 11 4 17a8 8 0 0 0 16 0c0-6-5-10-8-16z";
+
+function PeriodTick({ x, y, payload, days }: XAxisTickContentProps & { days: WeekChartDay[] }) {
+  const cx = Number(x);
+  const cy = Number(y);
+  return (
+    <g>
+      <text x={cx} y={cy} dy="0.71em" textAnchor="middle" {...TICK_STYLE}>
+        {payload.value}
+      </text>
+      {days[payload.index]?.period ? (
+        <path d={DROP_PATH} fill={BLOOD} transform={`translate(${cx - 3.5} ${cy + 14}) scale(${7 / 24})`} data-testid="period-tick" />
+      ) : null}
+    </g>
+  );
+}
 
 export function WeekChart({
   days,
@@ -30,6 +53,7 @@ export function WeekChart({
   testId?: string;
   height?: number;
 }) {
+  const anyPeriod = days.some((d) => d.period);
   return (
     <figure aria-label={summary} className="m-0" data-testid={testId}>
       {/* The pattern lives in its own SVG so every bar can reference it. */}
@@ -47,7 +71,8 @@ export function WeekChart({
               dataKey="label"
               tickLine={false}
               axisLine={{ stroke: INK, strokeWidth: 2 }}
-              tick={{ fill: INK, fontSize: 11, fontWeight: 800, fontFamily: "var(--font-mono)" }}
+              tick={anyPeriod ? (props: XAxisTickContentProps) => <PeriodTick {...props} days={days} /> : TICK_STYLE}
+              height={anyPeriod ? 34 : 30}
             />
             <YAxis hide allowDecimals={false} />
             <Bar dataKey="running" stackId="m" fill={INK} isAnimationActive={false} />

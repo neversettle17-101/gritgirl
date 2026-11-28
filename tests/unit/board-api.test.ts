@@ -20,9 +20,11 @@ const state: {
   signedIn: boolean;
   weekStartsOn: number;
   rows: ActivityRow[];
+  periodDays: string[];
+  circleLedgers: boolean;
   queries: Query[];
   fail: boolean;
-} = { signedIn: true, weekStartsOn: 1, rows: [], queries: [], fail: false };
+} = { signedIn: true, weekStartsOn: 1, rows: [], periodDays: [], circleLedgers: true, queries: [], fail: false };
 
 function fakeQuery(table: string) {
   const q: Query = { table, select: "" };
@@ -35,13 +37,26 @@ function fakeQuery(table: string) {
     gte: (_c: string, v: string) => ((q.gte = v), api),
     lte: (_c: string, v: string) => ((q.lte = v), api),
     order: () => api,
+    // period_days is awaited straight after .order().
+    then: (resolve: (v: unknown) => void, reject: (e: unknown) => void) => {
+      if (table !== "period_days") return reject(new Error(`unexpected await on ${table}`));
+      if (state.fail) return resolve({ data: null, error: { code: "XX000", message: "boom" } });
+      resolve({ data: state.periodDays.filter((d) => d >= q.gte! && d <= q.lte!).map((date) => ({ date })), error: null });
+    },
     returns: async () => {
       if (state.fail) return { data: null, error: { code: "XX000", message: "boom" } };
       const rows = state.rows.filter((r) => r.date >= q.gte! && r.date <= q.lte!);
       return { data: q.select === "date" ? rows.map((r) => ({ date: r.date })) : rows, error: null };
     },
     maybeSingle: async () => ({
-      data: { weight_unit: "kg", distance_unit: "km", timezone: "UTC", week_starts_on: state.weekStartsOn },
+      data: {
+        weight_unit: "kg",
+        distance_unit: "km",
+        timezone: "UTC",
+        week_starts_on: state.weekStartsOn,
+        cycle_circle_ledgers: state.circleLedgers,
+        cycle_circle_progress: true,
+      },
       error: null,
     }),
   };
@@ -76,6 +91,8 @@ beforeEach(() => {
   state.signedIn = true;
   state.weekStartsOn = 1;
   state.rows = [];
+  state.periodDays = [];
+  state.circleLedgers = true;
   state.queries = [];
   state.fail = false;
 });
@@ -197,6 +214,34 @@ describe("GET /api/board", () => {
     expect(body.streaks).toEqual({ current: 3, longest: 1 });
   });
 
+  it("week and month: period marks for the range, numbered from the period's start", async () => {
+    state.periodDays = ["2026-11-20", "2026-11-21", "2026-11-23", "2026-11-24", "2026-12-20"];
+    const week = await (await get("?view=week&date=2026-11-25")).json();
+    // The period began on the 20th (read through the lookback), so Monday is DAY 4.
+    expect(week.periodMarks).toEqual([
+      { date: "2026-11-23", day: 4 },
+      { date: "2026-11-24", day: 5 },
+    ]);
+    const pd = state.queries.find((q) => q.table === "period_days");
+    expect(pd).toMatchObject({ select: "date", lte: "2026-11-29" });
+    expect(pd!.gte! < "2026-11-20").toBe(true);
+
+    const month = await (await get("?view=month&date=2026-11-10")).json();
+    expect(month.periodMarks.map((m: { date: string }) => m.date)).toEqual(["2026-11-20", "2026-11-21", "2026-11-23", "2026-11-24"]);
+  });
+
+  it("period marks are empty when the ledger switch is off, and absent on day / year", async () => {
+    state.periodDays = ["2026-11-24"];
+    state.circleLedgers = false;
+    expect((await (await get("?view=week&date=2026-11-25")).json()).periodMarks).toEqual([]);
+
+    state.circleLedgers = true;
+    state.queries = [];
+    expect((await (await get("?view=day&date=2026-11-24")).json()).periodMarks).toBeUndefined();
+    expect((await (await get("?view=year&date=2026-11-24")).json()).periodMarks).toBeUndefined();
+    expect(state.queries.some((q) => q.table === "period_days")).toBe(false);
+  });
+
   it("defaults to this week (today in the user's time zone)", async () => {
     const body = await (await get("")).json();
     expect(body.range.view).toBe("week");
@@ -206,7 +251,9 @@ describe("GET /api/board", () => {
   it("500 when the database fails", async () => {
     state.fail = true;
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = await get("?view=day&date=2026-11-24");
-    expect(res.status).toBe(500);
+    for (const view of ["day", "week"]) {
+      const res = await get(`?view=${view}&date=2026-11-24`);
+      expect(res.status, view).toBe(500);
+    }
   });
 });
