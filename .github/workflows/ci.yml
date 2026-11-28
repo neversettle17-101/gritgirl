@@ -7,7 +7,8 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Never interrupt a production migration when another merge arrives.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -111,3 +112,35 @@ jobs:
           retention-days: 7
       - if: always()
         run: pnpm exec supabase stop --no-backup
+
+  production-migrations:
+    name: Apply production database migrations
+    needs: [checks, database, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: production-database-migrations
+      cancel-in-progress: false
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: sxixvveiwkuucxuyrpgm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check production credentials
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Set the SUPABASE_ACCESS_TOKEN repository secret for production migrations."
+            exit 1
+          fi
+      - name: Preview pending migrations
+        run: pnpm exec supabase db push --remote="$SUPABASE_PROJECT_REF" --dry-run
+      - name: Apply pending migrations
+        run: pnpm exec supabase db push --remote="$SUPABASE_PROJECT_REF" --yes
+      - name: Show production migration history
+        run: pnpm exec supabase migration list --remote="$SUPABASE_PROJECT_REF"

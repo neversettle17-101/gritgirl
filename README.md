@@ -173,12 +173,3 @@ domain (The Unlicense). See the README in that folder. `scripts/seed-exercises.t
 Exercises with `force = "static"` (plank, side bridge, isometric holds, static
 stretches) get `tracking = 'time'`. All others get `reps`. Search uses a
 `pg_trgm` GIN index on `name`, which makes it typo-tolerant.
-
-## CI
-
-`.github/workflows/ci.yml` has two jobs:
-
-- **Checks:** typecheck, lint, unit tests, production build.
-- **Database:** starts a fresh local Supabase in the runner, applies all
-  migrations (`supabase start` + `supabase db reset`), runs `supabase db lint`,
-  seeds the exercises and runs the DB test suite.
